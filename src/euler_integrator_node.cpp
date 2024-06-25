@@ -10,27 +10,24 @@ public:
     double dt_;
     int millisecondsTimer_;
     bool initial_condition_received_;
+    bool timer_running_;
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> positions;
     std::vector<uint8_t> ids;
 
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr motor_position_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     EulerIntegrator()
         : Node("euler_integrator"),
-          initial_condition_received_(false)
+          initial_condition_received_(false),
+          timer_running_(false)
     {
         dt_ = this->declare_parameter<double>("dt", 0.1);
         millisecondsTimer_ = this->declare_parameter<int>("millisecondsTimer", 2);
-
-        // IL SUBSCRIBER PER LE CONDIZIONI INIZIALI LO FACCIAMO CON WAIT FOR MSG. crea il subscriber e lo usa una sola volta.
-        // lo start e stop lo facciamo con std srvs set bool, il tipo di messaggio quindi non si deve creare
-        // la posizione desiderata, per ora, la pubblico su /motor_position_fake, un nuovo topic per non confondermi con /motor_position
 
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this,
@@ -40,13 +37,16 @@ public:
         motor_position_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "motor_state", 1, std::bind(&EulerIntegrator::initialPositionCallback, this, std::placeholders::_1));
 
-        // Publisher for the desired motor position topic (?)
+        // Publisher for the desired motor position topic
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 1);
 
+        // Timer for integration
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(millisecondsTimer_),
             std::bind(&EulerIntegrator::integrate, this));
+
+        timer_->cancel(); // Initially, the timer is stopped
     }
 
 private:
@@ -60,8 +60,6 @@ private:
             initial_condition_received_ = true;
             RCLCPP_INFO(this->get_logger(), "Received initial motor positions.");
         }
-        else
-            return;
     }
 
     void integrate()
@@ -71,32 +69,48 @@ private:
             RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
             return;
         }
-        // else
-        // {
-        //     std::cout << "initial condition ok\n";
-        // }
 
-        /*
-            Eulero:
-                posizione desiderata istante k+1 = posizione desiderata istante k + velocità istante k * dt
-
-                consideriamo la condizione iniziale
-
-                pubblico su topic le posizioni desiderate s
-        */
-
-        // for (size_t i = 0; i < positions.size(); i++)
-        // {
-        //     std::cout << "ID: " << (unsigned int)ids[i] << " position: " << positions[i] << "\n";
-        // }
+        // Euler integration logic
+        // For demonstration, the integration logic is omitted
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                           std::shared_ptr<std_srvs::srv::SetBool::Response> response)
     {
-        std::cout << "service callback\n";
-        // qui devono esser prese le condizioni iniziali con wait for msg
-        // e poi deve essere avviato  o stoppato il timer_, quindi l'esecuzione della timer_callback
+        if (request->data)
+        {
+            if (!timer_running_)
+            {
+                timer_->reset();
+                timer_running_ = true;
+                response->success = true;
+                response->message = "Timer started.";
+                RCLCPP_INFO(this->get_logger(), "Timer started.");
+            }
+            else
+            {
+                response->success = false;
+                response->message = "Timer is already running.";
+                RCLCPP_WARN(this->get_logger(), "Timer is already running.");
+            }
+        }
+        else
+        {
+            if (timer_running_)
+            {
+                timer_->cancel();
+                timer_running_ = false;
+                response->success = true;
+                response->message = "Timer stopped.";
+                RCLCPP_INFO(this->get_logger(), "Timer stopped.");
+            }
+            else
+            {
+                response->success = false;
+                response->message = "Timer is not running.";
+                RCLCPP_WARN(this->get_logger(), "Timer is not running.");
+            }
+        }
     }
 };
 
