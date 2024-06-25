@@ -33,15 +33,12 @@ public:
             "startstop", std::bind(&EulerIntegrator::service_callback, this,
                                    std::placeholders::_1, std::placeholders::_2));
 
-        // Subscription to the motor position topic (for initial condition)
         motor_position_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "motor_state", 1, std::bind(&EulerIntegrator::initialPositionCallback, this, std::placeholders::_1));
 
-        // Publisher for the desired motor position topic
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 1);
 
-        // Timer for integration
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(millisecondsTimer_),
             std::bind(&EulerIntegrator::integrate, this));
@@ -71,7 +68,6 @@ private:
         }
 
         // Euler integration logic
-        // For demonstration, the integration logic is omitted
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
