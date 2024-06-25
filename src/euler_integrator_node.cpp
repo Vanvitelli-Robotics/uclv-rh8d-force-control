@@ -38,7 +38,7 @@ public:
             std::chrono::milliseconds(millisecondsTimer_),
             std::bind(&EulerIntegrator::integrate, this));
 
-        timer_->cancel(); // Timer is stopped
+        timer_->cancel(); // Initially, the timer is stopped
     }
 
 private:
@@ -49,7 +49,20 @@ private:
             RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
             return;
         }
-       // Eulero
+
+        // Apply Euler integration at each time step
+        for (size_t i = 0; i < positions.size(); i++)
+        {
+            positions[i] = positions[i] + dt_ * motor_positions_.positions[i];
+        }
+
+        // Create a message to publish the new positions
+        uclv_seed_robotics_ros_interfaces::msg::MotorPositions desired_positions;
+        desired_positions.positions = positions;
+        desired_positions.ids = ids;
+
+        // Publish the new positions
+        desired_position_pub_->publish(desired_positions);
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -64,9 +77,14 @@ private:
                         motor_positions_, this->shared_from_this(), "/motor_state", std::chrono::seconds(1)))
                 {
                     initial_condition_received_ = true;
+
+                    positions = motor_positions_.positions;
+                    ids = motor_positions_.ids;
+
+                    // Initial conditions
                     for (size_t i = 0; i < motor_positions_.positions.size(); i++)
                     {
-                        RCLCPP_INFO(this->get_logger(), "ID: %d, Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
+                        RCLCPP_INFO(this->get_logger(), "ID: %d, Initial Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
                     }
 
                     timer_->reset();
