@@ -1,4 +1,5 @@
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
@@ -11,6 +12,8 @@ public:
     int millisecondsTimer_;
     bool initial_condition_received_;
     bool timer_running_;
+
+
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> positions;
@@ -33,9 +36,6 @@ public:
             "startstop", std::bind(&EulerIntegrator::service_callback, this,
                                    std::placeholders::_1, std::placeholders::_2));
 
-        motor_position_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
-            "motor_state", 1, std::bind(&EulerIntegrator::initialPositionCallback, this, std::placeholders::_1));
-
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 1);
 
@@ -47,18 +47,6 @@ public:
     }
 
 private:
-    void initialPositionCallback(const uclv_seed_robotics_ros_interfaces::msg::MotorPositions::SharedPtr pos)
-    {
-        if (!initial_condition_received_)
-        {
-            positions = pos->positions;
-            ids = pos->ids;
-
-            initial_condition_received_ = true;
-            RCLCPP_INFO(this->get_logger(), "Received initial motor positions.");
-        }
-    }
-
     void integrate()
     {
         if (!initial_condition_received_)
@@ -66,8 +54,6 @@ private:
             RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
             return;
         }
-
-        // Euler integration logic
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -82,6 +68,15 @@ private:
                 response->success = true;
                 response->message = "Timer started.";
                 RCLCPP_INFO(this->get_logger(), "Timer started.");
+
+                // qui devo prender le condizioni iniziali
+                rclcpp::wait_for_message(motor_positions_, this->shared_from_this(), "/motor_state",std::chrono::seconds(1));
+                for (size_t i = 0; i < motor_positions_.positions.size(); i++)
+                {
+                    std::cout << "ID: " << motor_positions_.ids[i] << "Position: " << motor_positions_.positions[i] << "\n";
+                }
+                initial_condition_received_ = true;
+                
             }
             else
             {
