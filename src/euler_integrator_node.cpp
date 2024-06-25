@@ -2,6 +2,7 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
 #include "std_srvs/srv/set_bool.hpp"
+#include <cmath>
 
 class EulerIntegrator : public rclcpp::Node
 {
@@ -10,6 +11,7 @@ public:
     int millisecondsTimer_;
     bool initial_condition_received_;
     bool timer_running_;
+    double time_; // Variabile per tracciare il tempo trascorso
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> positions;
     std::vector<uint8_t> ids;
@@ -22,7 +24,8 @@ public:
     EulerIntegrator()
         : Node("euler_integrator"),
           initial_condition_received_(false),
-          timer_running_(false)
+          timer_running_(false),
+          time_(0.0)
     {
         dt_ = this->declare_parameter<double>("dt", 0.1);
         millisecondsTimer_ = this->declare_parameter<int>("millisecondsTimer", 2);
@@ -42,6 +45,14 @@ public:
     }
 
 private:
+    double sin_fun_(double t)
+    {
+        double OFF = 2000.0;
+        double AMP = 1000.0;
+        double F = 1.0;
+        return ((AMP * std::sin(2.0 * M_PI * F * t)) + OFF);
+    }
+
     void integrate()
     {
         if (!initial_condition_received_)
@@ -50,10 +61,17 @@ private:
             return;
         }
 
+        // Increment time
+        time_ += dt_;
+
         // Apply Euler integration at each time step
         for (size_t i = 0; i < positions.size(); i++)
         {
-            positions[i] = positions[i] + dt_ * motor_positions_.positions[i];
+            // Simulate a sinusoidal velocity
+            float B = sin_fun_(time_);
+
+            // Update positions (A) using velocities (B)
+            positions[i] = positions[i] + dt_ * B;
         }
 
         // Create a message to publish the new positions
@@ -78,10 +96,11 @@ private:
                 {
                     initial_condition_received_ = true;
 
+                    // Set initial positions (A) to motor_positions received
                     positions = motor_positions_.positions;
                     ids = motor_positions_.ids;
 
-                    // Initial conditions
+                    // Log the initial conditions
                     for (size_t i = 0; i < motor_positions_.positions.size(); i++)
                     {
                         RCLCPP_INFO(this->get_logger(), "ID: %d, Initial Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
