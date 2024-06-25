@@ -3,8 +3,6 @@
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
-// using namespace uclv::dynamixel_utils;
-
 class EulerIntegrator : public rclcpp::Node
 {
 public:
@@ -12,9 +10,6 @@ public:
     int millisecondsTimer_;
     bool initial_condition_received_;
     bool timer_running_;
-
-
-
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> positions;
     std::vector<uint8_t> ids;
@@ -43,7 +38,7 @@ public:
             std::chrono::milliseconds(millisecondsTimer_),
             std::bind(&EulerIntegrator::integrate, this));
 
-        timer_->cancel(); // Initially, the timer is stopped
+        timer_->cancel(); // Timer is stopped
     }
 
 private:
@@ -54,6 +49,7 @@ private:
             RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
             return;
         }
+       // Eulero
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -63,20 +59,28 @@ private:
         {
             if (!timer_running_)
             {
-                timer_->reset();
-                timer_running_ = true;
-                response->success = true;
-                response->message = "Timer started.";
-                RCLCPP_INFO(this->get_logger(), "Timer started.");
-
-                // qui devo prender le condizioni iniziali
-                rclcpp::wait_for_message(motor_positions_, this->shared_from_this(), "/motor_state",std::chrono::seconds(1));
-                for (size_t i = 0; i < motor_positions_.positions.size(); i++)
+                // Wait for the initial condition
+                if (rclcpp::wait_for_message<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
+                        motor_positions_, this->shared_from_this(), "/motor_state", std::chrono::seconds(1)))
                 {
-                    std::cout << "ID: " << motor_positions_.ids[i] << "Position: " << motor_positions_.positions[i] << "\n";
+                    initial_condition_received_ = true;
+                    for (size_t i = 0; i < motor_positions_.positions.size(); i++)
+                    {
+                        RCLCPP_INFO(this->get_logger(), "ID: %d, Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
+                    }
+
+                    timer_->reset();
+                    timer_running_ = true;
+                    response->success = true;
+                    response->message = "Timer started.";
+                    RCLCPP_INFO(this->get_logger(), "Timer started.");
                 }
-                initial_condition_received_ = true;
-                
+                else
+                {
+                    response->success = false;
+                    response->message = "Failed to receive initial motor positions.";
+                    RCLCPP_WARN(this->get_logger(), "Failed to receive initial motor positions.");
+                }
             }
             else
             {
