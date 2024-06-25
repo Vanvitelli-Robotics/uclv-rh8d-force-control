@@ -9,12 +9,14 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(uclv_seed_robotics_ros_interfaces REQUIRED)
+find_package(std_srvs REQUIRED)
 
 add_executable(euler_integrator src/euler_integrator_node.cpp)
 ament_target_dependencies(
   euler_integrator
   "rclcpp"
   "uclv_seed_robotics_ros_interfaces"
+  "std_srvs"
 )
 
 install(TARGETS 
