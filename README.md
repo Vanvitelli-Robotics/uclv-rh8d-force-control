@@ -27,8 +27,7 @@ sudo apt-get install ros-[ROS Distribution]-dynamixel-sdk
 Replace [ROS Distribution] with your ROS 2 distribution (e.g., foxy, galactic, humble).<br /> 
 Next, clone the repository:
 ```bash
-git clone https://github.com/yourusername/uclv-dynamixel-utils.git
-cd uclv-dynamixel-utils
+git clone https://github.com/Vanvitelli-Robotics/uclv-dynamixel-utils.git
 ```
 ## Usage
 Here's a basic example of how to use the library to move Dynamixel motors:
