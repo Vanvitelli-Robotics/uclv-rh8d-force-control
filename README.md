@@ -24,7 +24,7 @@ First, install the Dynamixel SDK via ROS 2:
 ```bash
 sudo apt-get install ros-[ROS Distribution]-dynamixel-sdk
 ```
-Replace [ROS Distribution] with your ROS 2 distribution (e.g., foxy, galactic, humble).
+Replace [ROS Distribution] with your ROS 2 distribution (e.g., foxy, galactic, humble).<br /> 
 Next, clone the repository:
 ```bash
 git clone https://github.com/yourusername/uclv-dynamixel-utils.git
