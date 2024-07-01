@@ -1,9 +1,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/velocity_array.hpp" // Custom message type
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include <cmath>
+#include <vector>
 
 class EulerIntegrator : public rclcpp::Node
 {
@@ -12,11 +14,9 @@ public:
     bool initial_condition_received_;
     double time_;
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
-    std::vector<float> positions;
-    std::vector<uint8_t> ids;
-
+    std::vector<float> velocities_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-    rclcpp::Subscription<std::vector<std_msgs::msg::Int32>>::SharedPtr velocity_value_sub_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::VelocityArray>::SharedPtr velocity_value_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
@@ -31,12 +31,12 @@ public:
             "startstop", std::bind(&EulerIntegrator::service_callback, this,
                                    std::placeholders::_1, std::placeholders::_2));
 
-        velocity_value_sub_ = this->create_subscription<std::vector<std_msgs::msg::Int32>>(
-            "/cmd/velocity_value", 1,
-            std::bind(&EulerIntegrator::topic_callback, this, std::placeholders::_1));
+        velocity_value_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::VelocityArray>(
+            "/cmd/velocity_value", 10,
+            std::bind(&EulerIntegrator::velocity_callback, this, std::placeholders::_1));
 
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
-            "desired_position", 1);
+            "desired_position", 10);
 
         timer_ = this->create_wall_timer(
             std::chrono::duration<double>(dt_),
@@ -60,8 +60,6 @@ private:
         {
             RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
             return;
-
-            // throw exception
         }
 
         // Increment time
@@ -70,8 +68,7 @@ private:
         // Apply Euler integration at each time step
         for (size_t i = 0; i < motor_positions_.positions.size(); i++)
         {
-
-            float V = sin_fun_(time_); // questa cosa deve diventare un subscriber che non sappiamo da dove viene ma all'inizio diamo il valore da terminale
+            float V = (i < velocities_.size()) ? velocities_[i] : sin_fun_(time_);
             motor_positions_.positions[i] = motor_positions_.positions[i] + dt_ * V;
         }
 
@@ -79,9 +76,13 @@ private:
         desired_position_pub_->publish(motor_positions_);
     }
 
-    void topic_callback(const std::shared_ptr<std::vector<std_msgs::msg::Int32>> value)
+    void velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::VelocityArray::SharedPtr msg)
     {
-
+        velocities_.clear();
+        for (const auto &velocity : msg->velocities)
+        {
+            velocities_.push_back(velocity.data);
+        }
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -96,9 +97,7 @@ private:
                         motor_positions_, this->shared_from_this(), "/motor_state", std::chrono::seconds(1)))
                 {
                     initial_condition_received_ = true;
-
-                    // qui bisogna aggiungere la condizione iniziale per la velocità, una cosa del tipo V = 0 per ogni motore
-
+                    velocities_.resize(motor_positions_.positions.size(), 0.0);
 
                     // Log the initial conditions
                     for (size_t i = 0; i < motor_positions_.positions.size(); i++)
