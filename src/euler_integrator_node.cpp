@@ -1,7 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
-#include "uclv_seed_robotics_ros_interfaces/msg/velocity_array.hpp" // Custom message type
+#include "uclv_seed_robotics_ros_interfaces/msg/motor_velocities.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include <cmath>
@@ -11,27 +11,29 @@ class EulerIntegrator : public rclcpp::Node
 {
 public:
     double dt_;
+    std::vector<int64_t> motor_ids_;
+
     bool initial_condition_received_;
-    double time_;
+
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> velocities_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::VelocityArray>::SharedPtr velocity_value_sub_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr velocity_value_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     EulerIntegrator()
         : Node("euler_integrator"),
-          initial_condition_received_(false),
-          time_(0.0)
+          initial_condition_received_(false)
     {
-        dt_ = this->declare_parameter<double>("dt", 0.1);
+        dt_ = this->declare_parameter<double>("dt", double());
+        motor_ids_ = this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>());
 
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this,
                                    std::placeholders::_1, std::placeholders::_2));
 
-        velocity_value_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::VelocityArray>(
+        velocity_value_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
             "/cmd/velocity_value", 10,
             std::bind(&EulerIntegrator::velocity_callback, this, std::placeholders::_1));
 
@@ -46,42 +48,30 @@ public:
     }
 
 private:
-    double sin_fun_(double t)
-    {
-        double OFF = 2000.0;
-        double AMP = 1000.0;
-        double F = 1.0;
-        return ((AMP * std::sin(2.0 * M_PI * F * t)) + OFF);
-    }
-
     void integrate()
     {
-        if (!initial_condition_received_)
-        {
-            RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
-            return;
-        }
-
-        // Increment time
-        time_ += dt_;
-
         // Apply Euler integration at each time step
         for (size_t i = 0; i < motor_positions_.positions.size(); i++)
         {
-            float V = (i < velocities_.size()) ? velocities_[i] : sin_fun_(time_);
-            motor_positions_.positions[i] = motor_positions_.positions[i] + dt_ * V;
+            // qua si deve fare il chjeck velocity posizione id
+            motor_positions_.positions[i] = motor_positions_.positions[i] + dt_ * velocities_[i];
         }
 
         // Publish the new positions
         desired_position_pub_->publish(motor_positions_);
     }
 
-    void velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::VelocityArray::SharedPtr msg)
+    void velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorVelocities::SharedPtr msg)
     {
         velocities_.clear();
+        for (size_t i = 0; i < msg->ids.size(); i++)
+        {
+            std::cout << "id: " << (int)(msg->ids[i]) << " - velocity: " << msg->velocities[i] << "\n";
+        }
+
         for (const auto &velocity : msg->velocities)
         {
-            velocities_.push_back(velocity.data);
+            velocities_.push_back(velocity);
         }
     }
 
