@@ -2,43 +2,44 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
 #include "std_srvs/srv/set_bool.hpp"
+#include "std_msgs/msg/int32.hpp"
 #include <cmath>
 
 class EulerIntegrator : public rclcpp::Node
 {
 public:
     double dt_;
-    int millisecondsTimer_;
     bool initial_condition_received_;
-    bool timer_running_;
-    double time_; // Variabile per tracciare il tempo trascorso
+    double time_;
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> positions;
     std::vector<uint8_t> ids;
 
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr motor_position_sub_;
+    rclcpp::Subscription<std::vector<std_msgs::msg::Int32>>::SharedPtr velocity_value_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     EulerIntegrator()
         : Node("euler_integrator"),
           initial_condition_received_(false),
-          timer_running_(false),
           time_(0.0)
     {
         dt_ = this->declare_parameter<double>("dt", 0.1);
-        millisecondsTimer_ = this->declare_parameter<int>("millisecondsTimer", 2);
 
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this,
                                    std::placeholders::_1, std::placeholders::_2));
 
+        velocity_value_sub_ = this->create_subscription<std::vector<std_msgs::msg::Int32>>(
+            "/cmd/velocity_value", 1,
+            std::bind(&EulerIntegrator::topic_callback, this, std::placeholders::_1));
+
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 1);
 
         timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(millisecondsTimer_),
+            std::chrono::duration<double>(dt_),
             std::bind(&EulerIntegrator::integrate, this));
 
         timer_->cancel(); // Initially, the timer is stopped
@@ -59,28 +60,28 @@ private:
         {
             RCLCPP_WARN(this->get_logger(), "Waiting for initial motor positions...");
             return;
+
+            // throw exception
         }
 
         // Increment time
         time_ += dt_;
 
         // Apply Euler integration at each time step
-        for (size_t i = 0; i < positions.size(); i++)
+        for (size_t i = 0; i < motor_positions_.positions.size(); i++)
         {
-            // Simulate a sinusoidal velocity
-            float V = sin_fun_(time_);
 
-            // Update positions using velocities (V)
-            positions[i] = positions[i] + dt_ * V;
+            float V = sin_fun_(time_); // questa cosa deve diventare un subscriber che non sappiamo da dove viene ma all'inizio diamo il valore da terminale
+            motor_positions_.positions[i] = motor_positions_.positions[i] + dt_ * V;
         }
 
-        // Create a message to publish the new positions
-        uclv_seed_robotics_ros_interfaces::msg::MotorPositions desired_positions;
-        desired_positions.positions = positions;
-        desired_positions.ids = ids;
-
         // Publish the new positions
-        desired_position_pub_->publish(desired_positions);
+        desired_position_pub_->publish(motor_positions_);
+    }
+
+    void topic_callback(const std::shared_ptr<std::vector<std_msgs::msg::Int32>> value)
+    {
+
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -88,7 +89,7 @@ private:
     {
         if (request->data)
         {
-            if (!timer_running_)
+            if (timer_->is_canceled())
             {
                 // Wait for the initial condition
                 if (rclcpp::wait_for_message<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
@@ -96,9 +97,8 @@ private:
                 {
                     initial_condition_received_ = true;
 
-                    // Set initial positions (A) to motor_positions received
-                    positions = motor_positions_.positions;
-                    ids = motor_positions_.ids;
+                    // qui bisogna aggiungere la condizione iniziale per la velocità, una cosa del tipo V = 0 per ogni motore
+
 
                     // Log the initial conditions
                     for (size_t i = 0; i < motor_positions_.positions.size(); i++)
@@ -107,7 +107,6 @@ private:
                     }
 
                     timer_->reset();
-                    timer_running_ = true;
                     response->success = true;
                     response->message = "Timer started.";
                     RCLCPP_INFO(this->get_logger(), "Timer started.");
@@ -128,18 +127,17 @@ private:
         }
         else
         {
-            if (timer_running_)
+            if (!timer_->is_canceled())
             {
                 timer_->cancel();
-                timer_running_ = false;
                 response->success = true;
                 response->message = "Timer stopped.";
                 RCLCPP_INFO(this->get_logger(), "Timer stopped.");
             }
             else
             {
-                response->success = false;
-                response->message = "Timer is not running.";
+                response->success = true;
+                response->message = "Timer was not running.";
                 RCLCPP_WARN(this->get_logger(), "Timer is not running.");
             }
         }

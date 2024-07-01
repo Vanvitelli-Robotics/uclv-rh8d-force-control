@@ -15,15 +15,5 @@ def generate_launch_description():
                 {}
             ]
         ),
-        Node(
-            output='screen',
-            package="repo_controller",
-            # namespace =''
-            executable='proportional',
-            parameters=[
-                {},
-                {}
-            ]
-        ),
     ])
     
