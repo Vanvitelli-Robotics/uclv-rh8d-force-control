@@ -68,10 +68,10 @@ private:
         for (size_t i = 0; i < positions.size(); i++)
         {
             // Simulate a sinusoidal velocity
-            float B = sin_fun_(time_);
+            float V = sin_fun_(time_);
 
-            // Update positions (A) using velocities (B)
-            positions[i] = positions[i] + dt_ * B;
+            // Update positions using velocities (V)
+            positions[i] = positions[i] + dt_ * V;
         }
 
         // Create a message to publish the new positions
