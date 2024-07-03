@@ -89,10 +89,10 @@ private:
                 desired_velocity_.push_back(msg->velocities[i]);
             }
             else
-            {
-                // ERRORE SE QUEL msg->ids NON SI TROVA NELLA LISTA DEI MOTORI PASSATI AL LAUNCH FILE DELLA MANO
-                // SI DEVE INCAZZARE
-            }
+        {
+            RCLCPP_FATAL(this->get_logger(), "ID %ld in the received message is not present in motor_ids_. Exiting...", motor_ids_[i]);
+            throw std::runtime_error("ID in the received message is not present in motor_ids_");
+        }
         }
     }
 
