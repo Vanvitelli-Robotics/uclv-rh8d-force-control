@@ -23,33 +23,32 @@ public:
     rclcpp::TimerBase::SharedPtr timer_;
 
     EulerIntegrator()
-        : Node("euler_integrator"),
-          dt_(this->declare_parameter<double>("dt", 0.1)),
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>()))
-    {
-        desired_velocity_.reserve(motor_ids_.size()); 
-        
-        start_stop_service_ = create_service<std_srvs::srv::SetBool>(
-            "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
-
-        desired_velocity_sub = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
-            "/cmd/desired_velocity", 10, std::bind(&EulerIntegrator::desired_velocity_callback, this, std::placeholders::_1));
-
-        desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
-            "desired_position", 10);
-
-        timer_ = this->create_wall_timer(
-            std::chrono::duration<double>(dt_), std::bind(&EulerIntegrator::integrate, this));
-
-        
-        // eccezione se motor_ids_ è vuoto e si deve incazzare
-
-        
-        
-
-
-        timer_->cancel();
+    : Node("euler_integrator"),
+      dt_(this->declare_parameter<double>("dt", 0.1)),
+      motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>()))
+{
+    if (motor_ids_.empty()) {
+        RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_ids' is empty or not set. Exiting...");
+        throw std::runtime_error("Parameter 'motor_ids' is empty or not set");
     }
+
+    desired_velocity_.reserve(motor_ids_.size());
+
+    start_stop_service_ = create_service<std_srvs::srv::SetBool>(
+        "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
+
+    desired_velocity_sub = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
+        "/cmd/desired_velocity", 10, std::bind(&EulerIntegrator::desired_velocity_callback, this, std::placeholders::_1));
+
+    desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
+        "desired_position", 10);
+
+    timer_ = this->create_wall_timer(
+        std::chrono::duration<double>(dt_), std::bind(&EulerIntegrator::integrate, this));
+
+    timer_->cancel();
+}
+
 
 private:
     void integrate()
