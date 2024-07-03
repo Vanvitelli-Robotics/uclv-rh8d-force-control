@@ -14,11 +14,11 @@ public:
     std::vector<int64_t> motor_ids_;
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
-    std::vector<float> velocities_;
+    std::vector<float> desired_velocity_;
 
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
 
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr velocity_value_sub_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr desired_velocity_sub;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
@@ -27,11 +27,13 @@ public:
           dt_(this->declare_parameter<double>("dt", 0.1)),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>()))
     {
+        desired_velocity_.reserve(motor_ids_.size()); 
+        
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
-        velocity_value_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
-            "/cmd/velocity_value", 10, std::bind(&EulerIntegrator::velocity_callback, this, std::placeholders::_1));
+        desired_velocity_sub = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
+            "/cmd/desired_velocity", 10, std::bind(&EulerIntegrator::desired_velocity_callback, this, std::placeholders::_1));
 
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 10);
@@ -39,47 +41,57 @@ public:
         timer_ = this->create_wall_timer(
             std::chrono::duration<double>(dt_), std::bind(&EulerIntegrator::integrate, this));
 
+        
+        // eccezione se motor_ids_ è vuoto e si deve incazzare
+        
+        
+        
+
+
         timer_->cancel();
     }
 
 private:
     void integrate()
     {
-        for (size_t i = 0; i < motor_ids_.size(); i++)
+        // for (size_t i = 0; i < motor_ids_.size(); i++)
+        // {
+        //     // cerca in motor_positions_, che proviene dal wait_for_message della service_callback,
+        //     // il motor_ids_[i] cioè il singolo motore presente nella lista dei motori passati
+        //     // come parametro.
+        //     // Se la ricerca è ok, it contiene l'id
+        //     auto it = std::find(motor_positions_.ids.begin(), motor_positions_.ids.end(), motor_ids_[i]);
+        //     if (it != motor_positions_.ids.end()) // se non è stato trovato, l'iteratore ritorna l'ultima posizione del vettore
+        //     {
+        //         // mi devo trovare l'indice del motor_ids_[i] all'interno di motor_positions_ (perchè questo potrebbe contenere comunque
+        //         // tutti gli id dei motori perché viene inizializzato quando lancio la mano)
+        //         size_t index = std::distance(motor_positions_.ids.begin(), it);
+        //         // desired_velocity_ proviene dalla desired_velocity_callback del subscriber per la velocità
+        //         motor_positions_.positions[index] += dt_ * desired_velocity_[index];
+        //     }
+        // }
+        for (size_t i = 0; i < motor_positions_.ids.size(); i++)
         {
-            // cerca in motor_positions_, che proviene dal wait_for_message della service_callback,
-            // il motor_ids_[i] cioè il singolo motore presente nella lista dei motori passati
-            // come parametro.
-            // Se la ricerca è ok, it contiene l'id
-            auto it = std::find(motor_positions_.ids.begin(), motor_positions_.ids.end(), motor_ids_[i]);
-            if (it != motor_positions_.ids.end()) // se non è stato trovato, l'iteratore ritorna l'ultima posizione del vettore
-            {
-                // mi devo trovare l'indice del motor_ids_[i] all'interno di motor_positions_ (perchè questo potrebbe contenere comunque
-                // tutti gli id dei motori perché viene inizializzato quando lancio la mano)
-                size_t index = std::distance(motor_positions_.ids.begin(), it);
-                // velocities_ proviene dalla velocity_callback del subscriber per la velocità
-                motor_positions_.positions[index] += dt_ * velocities_[index];
-            }
+            motor_positions_.positions[i] += dt_ * desired_velocity_[i]; // QUI BISOGNA AGGIUNGERE L'ERRORE
         }
+        
 
         desired_position_pub_->publish(motor_positions_);
     }
 
-    void velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorVelocities::SharedPtr msg)
+    void desired_velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorVelocities::SharedPtr msg)
     {
-        velocities_.clear();
-        velocities_.reserve(motor_ids_.size());
-        // per ogni id nel messaggio inviato al topic /cmd/velocity_value
-        for (size_t i = 0; i < msg->ids.size(); i++)
+        desired_velocity_.clear();
+        for (size_t i = 0; i < motor_ids_.size(); i++)
         {
-            // cerco in motor_ids_, cioè il vettore passato come parametro che contiene gli id dei motori che mi interessano,
-            // l'id presente nel messaggio inviato al topic (sempre perché io potrei avere degli id che nel launch file ci sono ma
-            // nel messaggio inviato al topic no)
-            auto it = std::find(motor_ids_.begin(), motor_ids_.end(), msg->ids[i]);
-            if (it != motor_ids_.end()) // se non è stato trovato, l'iteratore ritorna l'ultima posizione del vettore
+            auto it = std::find(msg->ids.begin(), msg->ids.end(), motor_ids_[i]);
+            if (it != msg->ids.end())
             {
-                // riempio il vettore con le velocità degli id presenti in motor_ids_
-                velocities_.push_back(msg->velocities[i]);
+                desired_velocity_.push_back(msg->velocities[i]);
+            }
+            else
+            {
+                // ERRORE
             }
         }
     }
@@ -91,24 +103,25 @@ private:
         {
             if (timer_->is_canceled())
             {
-                // Wait for the initial condition
+                // metti eccezione wait for message se non arriva il message
                 if (rclcpp::wait_for_message<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
                         motor_positions_, this->shared_from_this(), "/motor_state", std::chrono::seconds(1)))
                 {
-                    // resize del vettore delle velocità e V = 0
-                    velocities_.resize(motor_ids_.size(), 0.0);
+                    desired_velocity_.resize(motor_ids_.size(), 0.0);
 
                     uclv_seed_robotics_ros_interfaces::msg::MotorPositions filtered_positions;
-                    // per ogni motore all'interno del vettore passato come parametro
                     for (size_t i = 0; i < motor_ids_.size(); i++)
                     {
-
                         auto it = std::find(motor_positions_.ids.begin(), motor_positions_.ids.end(), motor_ids_[i]);
                         if (it != motor_positions_.ids.end())
                         {
                             size_t index = std::distance(motor_positions_.ids.begin(), it);
                             filtered_positions.ids.push_back(motor_positions_.ids[index]);
                             filtered_positions.positions.push_back(motor_positions_.positions[index]);
+                        }
+                        else{
+                            // ERRORE!
+                            return;
                         }
                     }
                     motor_positions_ = filtered_positions;
@@ -128,6 +141,7 @@ private:
                     response->success = false;
                     response->message = "Failed to receive initial motor positions.";
                     RCLCPP_WARN(this->get_logger(), "Failed to receive initial motor positions.");
+                    return;
                 }
             }
             else
