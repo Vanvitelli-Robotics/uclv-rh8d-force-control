@@ -13,10 +13,14 @@ class EulerIntegrator : public rclcpp::Node
 public:
     double dt_;
     std::vector<int64_t> motor_ids_;
+
     bool initial_condition_received_;
+
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> velocities_;
+
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
+
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr velocity_value_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
@@ -43,36 +47,44 @@ public:
             std::chrono::duration<double>(dt_),
             std::bind(&EulerIntegrator::integrate, this));
 
-        timer_->cancel(); // Initially, the timer is stopped
+        timer_->cancel();
     }
 
 private:
     void integrate()
     {
-        // Apply Euler integration at each time step
         for (size_t i = 0; i < motor_ids_.size(); i++)
         {
+            // cerca in motor_positions_, che proviene dal wait_for_message della service_callback,
+            // il motor_ids_[i] cioè il singolo motore presente nella lista dei motori passati
+            // come parametro. 
+            // Se la ricerca è ok, it contiene l'id
             auto it = std::find(motor_positions_.ids.begin(), motor_positions_.ids.end(), motor_ids_[i]);
-            if (it != motor_positions_.ids.end())
+            if (it != motor_positions_.ids.end()) // se non è stato trovato, l'iteratore ritorna l'ultima posizione del vettore
             {
+                // mi devo trovare l'indice del motor_ids_[i] all'interno di motor_positions_ (perchè questo potrebbe contenere comunque
+                // tutti gli id dei motori perché viene inizializzato quando lancio la mano)
                 size_t index = std::distance(motor_positions_.ids.begin(), it);
+                // velocities_ proviene dalla velocity_callback del subscriber per la velocità
                 motor_positions_.positions[index] += dt_ * velocities_[index];
             }
         }
-
-        // Publish the new positions
+        
         desired_position_pub_->publish(motor_positions_);
     }
 
     void velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorVelocities::SharedPtr msg)
     {
         velocities_.clear();
+        // per ogni id nel messaggio inviato al topic /cmd/velocity_value
         for (size_t i = 0; i < msg->ids.size(); i++)
         {
-            if (std::find(motor_ids_.begin(), motor_ids_.end(), msg->ids[i]) != motor_ids_.end())
+            // cerco in motor_ids_, cioè il vettore passato come parametro che contiene gli id dei motori che mi interessano, 
+            // l'id presente nel messaggio inviato al topic
+            auto it = std::find(motor_ids_.begin(), motor_ids_.end(), msg->ids[i]);
+            if (it != motor_ids_.end()) // se non è stato trovato, l'iteratore ritorna l'ultima posizione del vettore
             {
                 velocities_.push_back(msg->velocities[i]);
-                std::cout << "id: " << (int)(msg->ids[i]) << " - velocity: " << msg->velocities[i] << "\n";
             }
         }
     }
@@ -89,12 +101,14 @@ private:
                         motor_positions_, this->shared_from_this(), "/motor_state", std::chrono::seconds(1)))
                 {
                     initial_condition_received_ = true;
+                    // resize del vettore delle velocità e V = 0
                     velocities_.resize(motor_ids_.size(), 0.0);
 
-                    // Filter motor_positions_ to include only those in motor_ids_
                     uclv_seed_robotics_ros_interfaces::msg::MotorPositions filtered_positions;
+                    // per ogni motore all'interno del vettore passato come parametro
                     for (size_t i = 0; i < motor_ids_.size(); i++)
                     {
+                        
                         auto it = std::find(motor_positions_.ids.begin(), motor_positions_.ids.end(), motor_ids_[i]);
                         if (it != motor_positions_.ids.end())
                         {
