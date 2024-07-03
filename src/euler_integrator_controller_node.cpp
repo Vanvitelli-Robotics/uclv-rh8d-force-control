@@ -43,7 +43,7 @@ public:
 
         
         // eccezione se motor_ids_ è vuoto e si deve incazzare
-        
+
         
         
 
@@ -91,7 +91,8 @@ private:
             }
             else
             {
-                // ERRORE
+                // ERRORE SE QUEL msg->ids NON SI TROVA NELLA LISTA DEI MOTORI PASSATI AL LAUNCH FILE DELLA MANO
+                // SI DEVE INCAZZARE
             }
         }
     }

@@ -11,16 +11,23 @@ find_package(rclcpp REQUIRED)
 find_package(uclv_seed_robotics_ros_interfaces REQUIRED)
 find_package(std_srvs REQUIRED)
 
-add_executable(euler_integrator src/euler_integrator_node.cpp)
+add_executable(euler_integrator_controller src/euler_integrator_controller_node.cpp)
 ament_target_dependencies(
-  euler_integrator
+  euler_integrator_controller
   "rclcpp"
   "uclv_seed_robotics_ros_interfaces"
   "std_srvs"
 )
 
+add_executable(proportional_controller src/proportional_controller_node.cpp)
+ament_target_dependencies(
+  proportional_controller
+  "rclcpp"
+)
+
 install(TARGETS 
-      euler_integrator
+      euler_integrator_controller
+      proportional_controller
       DESTINATION 
         lib/${PROJECT_NAME})
 
