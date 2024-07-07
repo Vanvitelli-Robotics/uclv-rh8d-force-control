@@ -4,21 +4,25 @@
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_velocities.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_msgs/msg/int32.hpp"
+#include "std_msgs/msg/float64.hpp"
 #include <cmath>
 #include <vector>
 #include <stdexcept>
+#include <optional>
 
 class EulerIntegrator : public rclcpp::Node
 {
 public:
     double dt_;
     std::vector<int64_t> motor_ids_;
+    std::optional<double> proportional_result_;
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> desired_velocity_;
 
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr desired_velocity_sub;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr desired_velocity_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr proportional_result_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
@@ -37,8 +41,11 @@ public:
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
-        desired_velocity_sub = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
+        desired_velocity_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
             "/cmd/desired_velocity", 10, std::bind(&EulerIntegrator::desired_velocity_callback, this, std::placeholders::_1));
+
+        proportional_result_sub_ = this->create_subscription<std_msgs::msg::Float64>(
+            "/result_proportional_controller", 10, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 10);
@@ -52,9 +59,14 @@ public:
 private:
     void integrate()
     {
+        if (!proportional_result_) {
+            RCLCPP_WARN(this->get_logger(), "Proportional result not received yet. Skipping integration step.");
+            return;
+        }
+
         for (size_t i = 0; i < motor_positions_.ids.size(); i++)
         {
-            motor_positions_.positions[i] += dt_ * desired_velocity_[i]; // Update position based on velocity and time step
+            motor_positions_.positions[i] += dt_ * desired_velocity_[i] * (*proportional_result_); // Update position based on velocity, proportional result and time step
         }
 
         desired_position_pub_->publish(motor_positions_);
@@ -76,6 +88,11 @@ private:
                 throw std::runtime_error("ID in the received message is not present in motor_ids_");
             }
         }
+    }
+
+    void proportional_result_callback(const std_msgs::msg::Float64::SharedPtr msg)
+    {
+        proportional_result_ = msg->data;
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
