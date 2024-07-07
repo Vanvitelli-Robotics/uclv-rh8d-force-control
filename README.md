@@ -1,6 +1,6 @@
 # Controller PI for grasp
 
-This repository contains a ROS 2 node, written in C++, which represents a PI controller thanks to which it is possible to perform a grasp action with the RH8D from Seed Robotics.
+This repository contains two ROS 2 node, written in C++, which represents a PI controller thanks to which it is possible to perform a grasp action with the RH8D from Seed Robotics.
 
 
 ## Table of Contents
