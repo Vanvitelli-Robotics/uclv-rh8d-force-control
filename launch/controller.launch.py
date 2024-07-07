@@ -7,7 +7,6 @@ def generate_launch_description():
         Node(
             output='screen',
             package='repo_controller',
-            # namespace='',
             executable='euler_integrator',
             name='euler_integrator',
             parameters=[
@@ -15,5 +14,13 @@ def generate_launch_description():
                 {"dt": 0.1}
             ]
         ),
+        Node(
+            output='screen',
+            package='repo_controller',
+            executable='proportional_controller',
+            name='proportional_controller',
+            parameters=[
+                {"gain": 1.0}
+            ]
+        ),
     ])
-    
