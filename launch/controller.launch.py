@@ -20,6 +20,7 @@ def generate_launch_description():
             executable='proportional_controller',
             name='proportional_controller',
             parameters=[
+                {"motor_ids": [31, 32, 33, 34, 35, 36, 37, 38]},
                 {"gain": 1.0}
             ]
         ),
