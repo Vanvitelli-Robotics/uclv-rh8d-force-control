@@ -1,16 +1,24 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float64.hpp"
-#include <optional>
 #include <stdexcept>
 
 class ProportionalController : public rclcpp::Node
 {
 public:
+    double gain_;
+    double desired_force_;
+    double measured_force_;
+
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr desired_force_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr measured_force_sub_;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr result_pub_;
+
     ProportionalController()
-    : Node("proportional_controller"),
-      gain_(this->declare_parameter<double>("gain", 1.0))
+        : Node("proportional_controller"),
+          gain_(this->declare_parameter<double>("gain", 1.0))
     {
-        if (gain_ < 0.0) {
+        if (gain_ < 0.0)
+        {
             RCLCPP_FATAL(this->get_logger(), "Parameter 'gain' must be non-negative. Exiting...");
             throw std::invalid_argument("Parameter 'gain' must be non-negative");
         }
@@ -28,7 +36,8 @@ public:
 private:
     void desired_force_callback(const std_msgs::msg::Float64::SharedPtr msg)
     {
-        if (std::isnan(msg->data)) {
+        if (std::isnan(msg->data))
+        {
             RCLCPP_WARN(this->get_logger(), "Received NaN in /desired_force. Ignoring...");
             return;
         }
@@ -38,7 +47,8 @@ private:
 
     void measured_force_callback(const std_msgs::msg::Float64::SharedPtr msg)
     {
-        if (std::isnan(msg->data)) {
+        if (std::isnan(msg->data))
+        {
             RCLCPP_WARN(this->get_logger(), "Received NaN in /measured_force. Ignoring...");
             return;
         }
@@ -48,10 +58,11 @@ private:
 
     void compute_and_publish_result()
     {
-        try {
+        try
+        {
             if (desired_force_ && measured_force_)
             {
-                double error = *desired_force_ - *measured_force_;
+                double error = desired_force_ - measured_force_;
                 double result = gain_ * error;
 
                 auto result_msg = std_msgs::msg::Float64();
@@ -64,19 +75,13 @@ private:
             {
                 RCLCPP_WARN(this->get_logger(), "Both /desired_force and /measured_force need to be received before computing the result.");
             }
-        } catch (const std::exception &e) {
+        }
+        catch (const std::exception &e)
+        {
             RCLCPP_FATAL(this->get_logger(), "Exception caught while computing result: %s", e.what());
             throw;
         }
     }
-
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr desired_force_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr measured_force_sub_;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr result_pub_;
-
-    double gain_;
-    std::optional<double> desired_force_;
-    std::optional<double> measured_force_;
 };
 
 int main(int argc, char *argv[])

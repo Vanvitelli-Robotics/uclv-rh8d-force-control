@@ -26,12 +26,13 @@ public:
     rclcpp::TimerBase::SharedPtr timer_;
 
     EulerIntegrator()
-    : Node("euler_integrator"),
-      dt_(this->declare_parameter<double>("dt", 0.1)),
-      motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
-      proportional_result_(1.0) // Initialize with a default value, e.g., 1.0
+        : Node("euler_integrator"),
+          dt_(this->declare_parameter<double>("dt", 0.1)),
+          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
+          proportional_result_(1.0)
     {
-        if (motor_ids_.empty()) {
+        if (motor_ids_.empty())
+        {
             RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_ids' is empty or not set. Exiting...");
             throw std::runtime_error("Parameter 'motor_ids' is empty or not set");
         }
@@ -44,11 +45,11 @@ public:
         desired_velocity_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
             "/cmd/desired_velocity", 10, std::bind(&EulerIntegrator::desired_velocity_callback, this, std::placeholders::_1));
 
-        proportional_result_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-            "/result_proportional_controller", 10, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
-
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "desired_position", 10);
+
+        proportional_result_sub_ = this->create_subscription<std_msgs::msg::Float64>(
+            "/result_proportional_controller", 10, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
         timer_ = this->create_wall_timer(
             std::chrono::duration<double>(dt_), std::bind(&EulerIntegrator::integrate, this));
@@ -61,7 +62,8 @@ private:
     {
         for (size_t i = 0; i < motor_positions_.ids.size(); i++)
         {
-            motor_positions_.positions[i] += dt_ * desired_velocity_[i] * proportional_result_; // Update position based on velocity, proportional result and time step
+            motor_positions_.positions[i] += dt_ * desired_velocity_[i] * proportional_result_;
+            RCLCPP_INFO(this->get_logger(), "ID motor %d - Integrate: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
         }
 
         desired_position_pub_->publish(motor_positions_);

@@ -10,12 +10,13 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(uclv_seed_robotics_ros_interfaces REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 add_executable(euler_integrator_controller src/euler_integrator_controller_node.cpp)
 ament_target_dependencies(
   euler_integrator_controller
   "rclcpp"
-  "uclv_seed_robotics_ros_interfaces"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
   "std_srvs"
 )
 
@@ -23,6 +24,7 @@ add_executable(proportional_controller src/proportional_controller_node.cpp)
 ament_target_dependencies(
   proportional_controller
   "rclcpp"
+  "std_msgs"
 )
 
 install(TARGETS 
