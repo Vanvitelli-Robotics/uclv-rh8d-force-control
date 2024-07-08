@@ -14,7 +14,7 @@ class EulerIntegrator : public rclcpp::Node
 public:
     double dt_;
     std::vector<int64_t> motor_ids_;
-    double proportional_result_;
+    float proportional_result_;
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> desired_velocity_;
@@ -60,13 +60,17 @@ public:
 private:
     void integrate()
     {
-        for (size_t i = 0; i < motor_positions_.ids.size(); i++)
+        if (rclcpp::wait_for_message<std_msgs::msg::Float64>(
+                proportional_result_, this->shared_from_this(), "/result_proportional_controller", std::chrono::seconds(1)))
         {
-            motor_positions_.positions[i] += dt_ * desired_velocity_[i] * proportional_result_;
-            RCLCPP_INFO(this->get_logger(), "ID motor %d - Integrate: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
-        }
+            for (size_t i = 0; i < motor_positions_.ids.size(); i++)
+            {
+                motor_positions_.positions[i] += dt_ * desired_velocity_[i] * proportional_result_;
+                RCLCPP_INFO(this->get_logger(), "ID motor %d - Integrate: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
+            }
 
-        desired_position_pub_->publish(motor_positions_);
+            desired_position_pub_->publish(motor_positions_);
+        }
     }
 
     void desired_velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorVelocities::SharedPtr msg)
