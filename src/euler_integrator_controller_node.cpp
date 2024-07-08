@@ -8,14 +8,13 @@
 #include <cmath>
 #include <vector>
 #include <stdexcept>
-#include <optional>
 
 class EulerIntegrator : public rclcpp::Node
 {
 public:
     double dt_;
     std::vector<int64_t> motor_ids_;
-    std::optional<double> proportional_result_;
+    double proportional_result_;
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
     std::vector<float> desired_velocity_;
@@ -29,7 +28,8 @@ public:
     EulerIntegrator()
     : Node("euler_integrator"),
       dt_(this->declare_parameter<double>("dt", 0.1)),
-      motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>()))
+      motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
+      proportional_result_(1.0) // Initialize with a default value, e.g., 1.0
     {
         if (motor_ids_.empty()) {
             RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_ids' is empty or not set. Exiting...");
@@ -59,14 +59,9 @@ public:
 private:
     void integrate()
     {
-        if (!proportional_result_) {
-            RCLCPP_WARN(this->get_logger(), "Proportional result not received yet. Skipping integration step.");
-            return;
-        }
-
         for (size_t i = 0; i < motor_positions_.ids.size(); i++)
         {
-            motor_positions_.positions[i] += dt_ * desired_velocity_[i] * (*proportional_result_); // Update position based on velocity, proportional result and time step
+            motor_positions_.positions[i] += dt_ * desired_velocity_[i] * proportional_result_; // Update position based on velocity, proportional result and time step
         }
 
         desired_position_pub_->publish(motor_positions_);
