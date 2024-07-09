@@ -1,12 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/fts3_sensors.hpp"
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
-
-/*
-    devo fare un mapping tra gli id che ho dato ai sensori e quelli dei motori 
-    perchè la mano deve essere inizializzata con gli id che mi servono
-*/
 
 class ProportionalController : public rclcpp::Node
 {
@@ -15,6 +11,8 @@ public:
     std::vector<int64_t> motor_ids_;
     uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors desired_forces_;
     uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors measured_forces_;
+
+    std::unordered_map<int64_t, std::vector<int64_t>> motor_to_sensor_map_;
 
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr sensor_state_sub_;
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr desired_forces_sub_;
@@ -37,6 +35,8 @@ public:
             throw std::runtime_error("Parameter 'motor_ids' is empty or not set");
         }
 
+        initialize_motor_to_sensor_map();
+
         sensor_state_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             "/sensor_state", 10, std::bind(&ProportionalController::sensor_state_callback, this, std::placeholders::_1));
 
@@ -48,13 +48,21 @@ public:
     }
 
 private:
+    void initialize_motor_to_sensor_map()
+    {
+        motor_to_sensor_map_[35] = {0};
+        motor_to_sensor_map_[36] = {1};
+        motor_to_sensor_map_[37] = {2};
+        motor_to_sensor_map_[38] = {3, 4};
+    }
+
     void sensor_state_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
         measured_forces_ = *msg;
         RCLCPP_INFO(this->get_logger(), "Received measured forces:");
         for (size_t i = 0; i < msg->forces.size(); ++i)
         {
-            RCLCPP_INFO(this->get_logger(), "Motor ID: %ld, Force: (%f, %f, %f)",
+            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
                         msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
         }
         compute_and_publish_result();
@@ -66,7 +74,7 @@ private:
         RCLCPP_INFO(this->get_logger(), "Received desired forces:");
         for (size_t i = 0; i < msg->forces.size(); ++i)
         {
-            RCLCPP_INFO(this->get_logger(), "Motor ID: %ld, Force: (%f, %f, %f)",
+            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
                         msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
         }
         compute_and_publish_result();
@@ -74,45 +82,53 @@ private:
 
     void compute_and_publish_result()
     {
-        if (desired_forces_.forces.size() != measured_forces_.forces.size())
+        if (desired_forces_.forces.empty() || measured_forces_.forces.empty())
         {
-            RCLCPP_FATAL(this->get_logger(), "Mismatch in size of desired and measured forces vectors.");
+            RCLCPP_WARN(this->get_logger(), "Desired or measured forces vectors are empty.");
             return;
         }
 
         uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors result_msg;
         result_msg.header.stamp = this->now();
 
-        size_t num_forces = measured_forces_.forces.size();
-
-        result_msg.forces.resize(num_forces);
-        result_msg.ids.resize(num_forces);
-
-        for (size_t i = 0; i < num_forces; ++i)
+        for (int64_t motor_id : motor_ids_)
         {
-            try
+            auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id);
+            if (sensor_ids_iter == motor_to_sensor_map_.end())
             {
-                // Compute error
-                double error_x = desired_forces_.forces[i].x - measured_forces_.forces[i].x;
-                double error_y = desired_forces_.forces[i].y - measured_forces_.forces[i].y;
-                double error_z = desired_forces_.forces[i].z - measured_forces_.forces[i].z;
+                RCLCPP_FATAL(this->get_logger(), "No mapping found for motor ID: %ld", motor_id);
+                continue;
+            }
 
-                // Compute result using the gain
-                result_msg.forces[i].x = gain_ * error_x;
-                result_msg.forces[i].y = gain_ * error_y;
-                result_msg.forces[i].z = gain_ * error_z;
+            const auto &sensor_ids = sensor_ids_iter->second;
+            for (int64_t sensor_id : sensor_ids)
+            {
+                auto measured_force_iter = std::find(measured_forces_.ids.begin(), measured_forces_.ids.end(), sensor_id);
+                auto desired_force_iter = std::find(desired_forces_.ids.begin(), desired_forces_.ids.end(), sensor_id);
 
-                // Copy ids
-                result_msg.ids[i] = measured_forces_.ids[i];
+                if (measured_force_iter == measured_forces_.ids.end() || desired_force_iter == desired_forces_.ids.end())
+                {
+                    RCLCPP_FATAL(this->get_logger(), "Sensor ID: %ld not found in received messages", sensor_id);
+                    continue;
+                }
+
+                size_t measured_idx = std::distance(measured_forces_.ids.begin(), measured_force_iter);
+                size_t desired_idx = std::distance(desired_forces_.ids.begin(), desired_force_iter);
+
+                double error_x = desired_forces_.forces[desired_idx].x - measured_forces_.forces[measured_idx].x;
+                double error_y = desired_forces_.forces[desired_idx].y - measured_forces_.forces[measured_idx].y;
+                double error_z = desired_forces_.forces[desired_idx].z - measured_forces_.forces[measured_idx].z;
+
+                uclv_seed_robotics_ros_interfaces::msg::Vector3 result_force;
+                result_force.x = gain_ * error_x;
+                result_force.y = gain_ * error_y;
+                result_force.z = gain_ * error_z;
+
+                result_msg.ids.push_back(motor_id);
+                result_msg.forces.push_back(result_force);
 
                 RCLCPP_INFO(this->get_logger(), "Published result for motor %ld: (%f, %f, %f)",
-                            result_msg.ids[i], result_msg.forces[i].x, result_msg.forces[i].y, result_msg.forces[i].z);
-            }
-            catch (const std::exception &e)
-            {
-                RCLCPP_FATAL(this->get_logger(), "Exception caught while computing result for motor %ld: %s",
-                             measured_forces_.ids[i], e.what());
-                throw;
+                            motor_id, result_force.x, result_force.y, result_force.z);
             }
         }
 
