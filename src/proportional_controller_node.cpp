@@ -44,7 +44,7 @@ public:
             "/sensor_state", 1, std::bind(&ProportionalController::sensor_state_callback, this, std::placeholders::_1));
 
         desired_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
-            "/desired_forces", 1, std::bind(&ProportionalController::desired_forces_callback, this, std::placeholders::_1));
+            "/cmd/desired_forces", 1, std::bind(&ProportionalController::desired_forces_callback, this, std::placeholders::_1));
 
         result_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             "/result_proportional_controller", 1);
