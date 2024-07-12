@@ -1,42 +1,31 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
-#include "uclv_seed_robotics_ros_interfaces/msg/motor_velocities.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/fts3_sensors.hpp"
 #include "std_srvs/srv/set_bool.hpp"
-#include "std_msgs/msg/int32.hpp"
-#include "std_msgs/msg/float64.hpp"
-#include <cmath>
 #include <vector>
 #include <stdexcept>
-#include <experimental/optional>
-
-/*
-    ricorda di mettere la velocità = 0, cioè quello che esce dal proporzionale, all'inizio
-    quando arriva qualcosa dal proporzionale, allora aggiorni la variabile, altrimenti integra continuamente 0
-    poi ricordati di manteinere sempre l'ultimo valore di velocità mantenuto come se fosse uno ZOH
-*/
-
 
 class EulerIntegrator : public rclcpp::Node
 {
 public:
     double dt_;
     std::vector<int64_t> motor_ids_;
-    std::experimental::optional<float> proportional_result_;
+    uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr proportional_result_;
+    bool proportional_result_received_;
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
-    // std::vector<float> desired_velocity_;
 
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-    // rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>::SharedPtr desired_velocity_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr proportional_result_sub_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr proportional_result_sub_;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     EulerIntegrator()
         : Node("euler_integrator"),
           dt_(this->declare_parameter<double>("dt", 0.1)),
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>()))
+          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
+          proportional_result_received_(false)
     {
         if (motor_ids_.empty())
         {
@@ -44,19 +33,14 @@ public:
             throw std::runtime_error("Parameter 'motor_ids' is empty or not set");
         }
 
-        // desired_velocity_.resize(motor_ids_.size(), 0.0);
-
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
-        // desired_velocity_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorVelocities>(
-        //     "/cmd/desired_velocity", 10, std::bind(&EulerIntegrator::desired_velocity_callback, this, std::placeholders::_1));
+        proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
+            "/result_proportional_controller", 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
-            "desired_position", 10);
-
-        proportional_result_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-            "/result_proportional_controller", 10, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
+            "/desired_position", 10);
 
         timer_ = this->create_wall_timer(
             std::chrono::duration<double>(dt_), std::bind(&EulerIntegrator::integrate, this));
@@ -67,12 +51,21 @@ public:
 private:
     void integrate()
     {
-        if (proportional_result_)
+        if (proportional_result_received_)
         {
             for (size_t i = 0; i < motor_positions_.ids.size(); i++)
             {
-                motor_positions_.positions[i] += dt_ /** desired_velocity_[i]*/ * proportional_result_.value();
-                RCLCPP_INFO(this->get_logger(), "ID motor %ld - Integrate: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
+                // RCLCPP_INFO(this->get_logger(), "Before Integration - Motor ID: %ld, Position: %f, Force Z: %f",
+                //             motor_positions_.ids[i], motor_positions_.positions[i], proportional_result_->forces[i].z);
+
+
+                // questo fa l'integrazione su motor positions positions ma io la devo fare su solo quelli che stanno 
+                // nella mappa motore-sensore
+
+
+                motor_positions_.positions[i] += dt_ * proportional_result_->forces[i].z; 
+            //     RCLCPP_INFO(this->get_logger(), "After Integration - Motor ID: %ld, New Position: %f",
+            //                 motor_positions_.ids[i], motor_positions_.positions[i]);
             }
 
             desired_position_pub_->publish(motor_positions_);
@@ -83,27 +76,17 @@ private:
         }
     }
 
-    // void desired_velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorVelocities::SharedPtr msg)
-    // {
-    //     for (size_t i = 0; i < motor_ids_.size(); i++)
-    //     {
-    //         auto it = std::find(msg->ids.begin(), msg->ids.end(), motor_ids_[i]);
-    //         if (it != msg->ids.end())
-    //         {
-    //             size_t index = std::distance(msg->ids.begin(), it);
-    //             desired_velocity_[i] = msg->velocities[index];
-    //         }
-    //         else
-    //         {
-    //             RCLCPP_FATAL(this->get_logger(), "ID %ld in the received message is not present in motor_ids_. Exiting...", motor_ids_[i]);
-    //             throw std::runtime_error("ID in the received message is not present in motor_ids_");
-    //         }
-    //     }
-    // }
-
-    void proportional_result_callback(const std_msgs::msg::Float64::SharedPtr msg)
+    void proportional_result_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
-        proportional_result_ = msg->data;
+        proportional_result_ = msg;
+        proportional_result_received_ = true;
+
+        RCLCPP_INFO(this->get_logger(), "Received proportional result:");
+        for (size_t i = 0; i < msg->forces.size(); i++)
+        {
+            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
+                        msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
+        }
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -134,10 +117,10 @@ private:
                     }
                     motor_positions_ = filtered_positions;
 
-                    for (size_t i = 0; i < motor_positions_.positions.size(); i++)
-                    {
-                        RCLCPP_INFO(this->get_logger(), "ID: %ld, Initial Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
-                    }
+                    // for (size_t i = 0; i < motor_positions_.positions.size(); i++)
+                    // {
+                    //     RCLCPP_INFO(this->get_logger(), "ID: %ld, Initial Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
+                    // }
 
                     timer_->reset();
                     response->success = true;

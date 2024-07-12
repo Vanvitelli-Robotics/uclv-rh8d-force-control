@@ -63,26 +63,20 @@ private:
     {
         measured_forces_ = *msg;
         measured_forces_received_ = true;
-        // RCLCPP_INFO(this->get_logger(), "Received measured forces:");
-        // for (size_t i = 0; i < msg->forces.size(); ++i)
-        // {
-        //     RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
-        //                 msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
-        // }
-        // compute_and_publish_result();
+        compute_and_publish_result();
     }
 
     void desired_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
         desired_forces_ = *msg;
         desired_forces_received_ = true;
-        RCLCPP_INFO(this->get_logger(), "Received desired forces:");
-        for (size_t i = 0; i < msg->forces.size(); ++i)
-        {
-            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
-                        msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
-        }
-        compute_and_publish_result();
+        // RCLCPP_INFO(this->get_logger(), "Received desired forces:");
+        // for (size_t i = 0; i < msg->forces.size(); ++i)
+        // {
+        //     RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
+        //                 msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
+        // }
+        // compute_and_publish_result();
     }
 
     void compute_and_publish_result()
@@ -173,7 +167,7 @@ private:
             }
         }
 
-        RCLCPP_INFO(this->get_logger(), "Publishing result with %zu forces", result_msg.forces.size());
+
         result_pub_->publish(result_msg);
 
         // Reset flags to ensure fresh data for next computation
