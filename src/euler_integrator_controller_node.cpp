@@ -59,11 +59,11 @@ private:
                 //             motor_positions_.ids[i], motor_positions_.positions[i], proportional_result_->forces[i].z);
 
 
-                // questo fa l'integrazione su motor positions positions ma io la devo fare su solo quelli che stanno 
-                // nella mappa motore-sensore
 
-
+                // quì devo considerare uno ZOH per mantenere l'ultimo proportional_result_ ricevuto oppure 0
+                // ricordati il fatto della velocità
                 motor_positions_.positions[i] += dt_ * proportional_result_->forces[i].z; 
+                
             //     RCLCPP_INFO(this->get_logger(), "After Integration - Motor ID: %ld, New Position: %f",
             //                 motor_positions_.ids[i], motor_positions_.positions[i]);
             }

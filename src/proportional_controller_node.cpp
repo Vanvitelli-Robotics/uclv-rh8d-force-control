@@ -70,28 +70,28 @@ private:
     {
         desired_forces_ = *msg;
         desired_forces_received_ = true;
-        // RCLCPP_INFO(this->get_logger(), "Received desired forces:");
-        // for (size_t i = 0; i < msg->forces.size(); ++i)
-        // {
-        //     RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
-        //                 msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
-        // }
-        // compute_and_publish_result();
+        RCLCPP_INFO(this->get_logger(), "Received desired forces:");
+        for (size_t i = 0; i < msg->forces.size(); ++i)
+        {
+            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
+                        msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
+        }
+        compute_and_publish_result();
     }
 
     void compute_and_publish_result()
     {
-        if (!desired_forces_received_)
-        {
-            RCLCPP_WARN(this->get_logger(), "Desired forces not yet received.");
-            return;
-        }
+        // if (!desired_forces_received_)
+        // {
+        //     RCLCPP_WARN(this->get_logger(), "Desired forces not yet received.");
+        //     return;
+        // }
 
-        if (!measured_forces_received_)
-        {
-            RCLCPP_WARN(this->get_logger(), "Measured forces not yet received.");
-            return;
-        }
+        // if (!measured_forces_received_)
+        // {
+        //     RCLCPP_WARN(this->get_logger(), "Measured forces not yet received.");
+        //     return;
+        // }
 
         if (desired_forces_.forces.empty() || measured_forces_.forces.empty())
         {
