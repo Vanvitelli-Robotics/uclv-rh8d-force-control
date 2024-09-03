@@ -58,14 +58,12 @@ private:
                 // RCLCPP_INFO(this->get_logger(), "Before Integration - Motor ID: %ld, Position: %f, Force Z: %f",
                 //             motor_positions_.ids[i], motor_positions_.positions[i], proportional_result_->forces[i].z);
 
-
-
                 // quì devo considerare uno ZOH per mantenere l'ultimo proportional_result_ ricevuto oppure 0
                 // ricordati il fatto della velocità
-                motor_positions_.positions[i] += dt_ * proportional_result_->forces[i].z; 
-                
-            //     RCLCPP_INFO(this->get_logger(), "After Integration - Motor ID: %ld, New Position: %f",
-            //                 motor_positions_.ids[i], motor_positions_.positions[i]);
+                motor_positions_.positions[i] += dt_ * proportional_result_->forces[i].z;
+
+                // RCLCPP_INFO(this->get_logger(), "After Integration - Motor ID: %ld, New Position: %f",
+                //             motor_positions_.ids[i], motor_positions_.positions[i]);
             }
 
             desired_position_pub_->publish(motor_positions_);
@@ -81,12 +79,12 @@ private:
         proportional_result_ = msg;
         proportional_result_received_ = true;
 
-        RCLCPP_INFO(this->get_logger(), "Received proportional result:");
-        for (size_t i = 0; i < msg->forces.size(); i++)
-        {
-            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
-                        msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
-        }
+        // RCLCPP_INFO(this->get_logger(), "Received proportional result:");
+        // for (size_t i = 0; i < msg->forces.size(); i++)
+        // {
+        //     RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
+        //                 msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
+        // }
     }
 
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,

@@ -70,12 +70,12 @@ private:
     {
         desired_forces_ = *msg;
         desired_forces_received_ = true;
-        RCLCPP_INFO(this->get_logger(), "Received desired forces:");
-        for (size_t i = 0; i < msg->forces.size(); ++i)
-        {
-            RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
-                        msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
-        }
+        // RCLCPP_INFO(this->get_logger(), "Received desired forces:");
+        // for (size_t i = 0; i < msg->forces.size(); ++i)
+        // {
+        //     RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
+        //                 msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
+        // }
         compute_and_publish_result();
     }
 
@@ -98,6 +98,7 @@ private:
             RCLCPP_WARN(this->get_logger(), "Desired or measured forces vectors are empty.");
             return;
         }
+        
 
         // Initialize the message to publish
         uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors result_msg;
@@ -123,7 +124,7 @@ private:
             {
                 sensor_ids_str += std::to_string(sensor_id) + " ";
             }
-            RCLCPP_INFO(this->get_logger(), "Motor ID: %ld maps to Sensor IDs: %s", motor_id, sensor_ids_str.c_str());
+            // RCLCPP_INFO(this->get_logger(), "Motor ID: %ld maps to Sensor IDs: %s", motor_id, sensor_ids_str.c_str());
 
             // For each sensor id
             for (int64_t sensor_id : sensor_ids)
