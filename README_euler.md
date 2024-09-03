@@ -20,13 +20,13 @@ Published Topics
 
 - **/startstop** (`std_srvs::srv::SetBool`): Service to start or stop the integration process.
 
-Request:
-**data** (bool): True to start the integration, False to stop it.
+    -Request:
+      - **data** (bool): True to start the integration, False to stop it.
 
-Response:
-- **success** (bool): True if the operation was successful, otherwise False.
-- **message** (string): Provides feedback about the operation.
-  
+    -Response:
+      - **success** (bool): True if the operation was successful, otherwise False.
+      - **message** (string): Provides feedback about the operation.
+        
 ## Node Functionality
 
 ### Initialization
