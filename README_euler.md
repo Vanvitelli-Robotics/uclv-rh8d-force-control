@@ -18,7 +18,7 @@ Published Topics
 
 ## Services
 
-**/startstop** (`std_srvs::srv::SetBool`): Service to start or stop the integration process.
+- **/startstop** (`std_srvs::srv::SetBool`): Service to start or stop the integration process.
 
 Request:
 **data** (bool): True to start the integration, False to stop it.
