@@ -1,7 +1,7 @@
 # Proportional Controller Node
 
 ## Overview
-The `ProportionalController` node implements a proportional control strategy for a robotic hand using force-torque sensors. It receives desired and measured force values, computes the error, and publishes the corrected forces based on a proportional gain.
+The `proportional_controller_node` implements a proportional control strategy for a robotic hand using force-torque sensors. It receives desired and measured force values, computes the error, and publishes the corrected forces based on a proportional gain.
 
 ## Parameters
 - **gain** (double): The proportional gain used in the control algorithm. Must be non-negative.
@@ -108,4 +108,4 @@ To run the node using ROS 2:
 
 ## Conclusion
 
-The `ProportionalController` node provides a proportional control mechanism for robotic hands, leveraging force-torque sensors to ensure desired forces are achieved. Proper configuration and parameter settings are essential for optimal performance.
+The `proportional_controller_node` provides a proportional control mechanism for robotic hands, leveraging force-torque sensors to ensure desired forces are achieved. Proper configuration and parameter settings are essential for optimal performance.
