@@ -4,7 +4,7 @@
 
 `euler_integrator_node` implements an Euler integration strategy to compute the desired motor positions for a robotic system based on the forces calculated by a proportional controller. The node subscribes to the corrected forces, applies Euler integration to update motor positions, and publishes the desired motor positions.
 
-## Parameters
+## Parameters
 
 - **dt** (double): The integration time step. Must be a positive value. Default is 0.1.
 - **motor_ids** (vector<int64_t>): A list of motor IDs that the node controls. This parameter is required and must not be empty.
