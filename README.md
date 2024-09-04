@@ -30,15 +30,8 @@ Next, clone the repository:
 git clone https://github.com/Vanvitelli-Robotics/uclv-dynamixel-utils.git
 ```
 ## Usage
-Here's a basic example of how to use the library to move Dynamixel motors:
-```cpp
-```
+Read [euler_integrator_controller_node](./README/README_euler_integrator_controller_node)
+Read [proportional_controller_node](./README/README_proportional_controller_node)
 
 
-
-* avvio il launch della mano
-* avvio il launch dell'integratore
-* ros2 topic echo /motor_state per vedere lo stato delle posizioni (per ora) dei motori
-* mi servono le velocità ros2 topic pub /desired_velocity     ros2 topic pub /cmd/desired_velocity uclv_seed_robotics_ros_interfaces/msg/             MotorVelocities "{ids: [31, 32, 33, 34, 35, 36, 37, 38] ,velocities: [100, 100, 100, 100, 100, 1000, 100, 100]}"
-* se starto il servizio, si prende le posizioni e integra     ros2 service call /startstop std_srvs/srv/SetBool "{data: True}"
 
