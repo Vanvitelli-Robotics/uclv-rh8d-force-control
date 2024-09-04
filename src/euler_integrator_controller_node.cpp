@@ -9,63 +9,66 @@
 class EulerIntegrator : public rclcpp::Node
 {
 public:
-    double dt_;
-    std::vector<int64_t> motor_ids_;
-    uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr proportional_result_;
-    bool proportional_result_received_;
+    double dt_;  // Time step for integration
+    std::vector<int64_t> motor_ids_;  // Motor IDs to be controlled
+    uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr proportional_result_;  // Latest force sensor result
+    bool proportional_result_received_;  // Flag to indicate if a proportional result has been received
 
-    uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;
+    uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;  // Current motor positions
 
-    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr proportional_result_sub_;
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;
-    rclcpp::TimerBase::SharedPtr timer_;
+    // ROS interfaces
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;  // Service to start/stop the integration
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr proportional_result_sub_;  // Subscription to force sensor data
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;  // Publisher for desired motor positions
+    rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
     EulerIntegrator()
-        : Node("euler_integrator"),
-          dt_(this->declare_parameter<double>("dt", 0.1)),
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
-          proportional_result_received_(false)
+        : Node("euler_integrator"),  // Initialize node with name "euler_integrator"
+          dt_(this->declare_parameter<double>("dt", 0.1)),  // Get the integration time step (dt) from parameters, default to 0.1 seconds
+          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
+          proportional_result_received_(false)  // Initialize flag as false
     {
+        // Check if motor IDs are provided; if not, log an error and throw an exception
         if (motor_ids_.empty())
         {
             RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_ids' is empty or not set. Exiting...");
             throw std::runtime_error("Parameter 'motor_ids' is empty or not set");
         }
 
+        // Create a service to start/stop the integration process
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
             "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
+        // Subscribe to force sensor data from the proportional controller
         proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             "/result_proportional_controller", 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
+        // Create a publisher for desired motor positions
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             "/desired_position", 10);
 
+        // Create a timer that calls the integrate method at intervals defined by dt_
         timer_ = this->create_wall_timer(
             std::chrono::duration<double>(dt_), std::bind(&EulerIntegrator::integrate, this));
 
+        // Initially, stop the timer to avoid unintended execution
         timer_->cancel();
     }
 
 private:
+    // Method to perform integration to update motor positions
     void integrate()
     {
-        if (proportional_result_received_)
+        if (proportional_result_received_)  // Check if the latest sensor data is available
         {
+            // Update each motor position using the Euler integration method
             for (size_t i = 0; i < motor_positions_.ids.size(); i++)
             {
-                // RCLCPP_INFO(this->get_logger(), "Before Integration - Motor ID: %ld, Position: %f, Force Z: %f",
-                //             motor_positions_.ids[i], motor_positions_.positions[i], proportional_result_->forces[i].z);
-
-                // quì devo considerare uno ZOH per mantenere l'ultimo proportional_result_ ricevuto oppure 0
-                // ricordati il fatto della velocità
+                // Update position based on force data (Z-axis force is used in this example)
                 motor_positions_.positions[i] += dt_ * proportional_result_->forces[i].z;
-
-                // RCLCPP_INFO(this->get_logger(), "After Integration - Motor ID: %ld, New Position: %f",
-                //             motor_positions_.ids[i], motor_positions_.positions[i]);
             }
 
+            // Publish the updated motor positions
             desired_position_pub_->publish(motor_positions_);
         }
         else
@@ -74,30 +77,28 @@ private:
         }
     }
 
+    // Callback function for receiving force sensor data
     void proportional_result_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
-        proportional_result_ = msg;
-        proportional_result_received_ = true;
-
-        // RCLCPP_INFO(this->get_logger(), "Received proportional result:");
-        // for (size_t i = 0; i < msg->forces.size(); i++)
-        // {
-        //     RCLCPP_INFO(this->get_logger(), "Sensor ID: %ld, Force: (%f, %f, %f)",
-        //                 msg->ids[i], msg->forces[i].x, msg->forces[i].y, msg->forces[i].z);
-        // }
+        proportional_result_ = msg;  // Store the latest sensor data
+        proportional_result_received_ = true;  // Set the flag to indicate data has been received
     }
 
+    // Callback function for the start/stop service
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                           std::shared_ptr<std_srvs::srv::SetBool::Response> response)
     {
-        if (request->data)
+        if (request->data)  // If the service request data is true, start the timer
         {
-            if (timer_->is_canceled())
+            if (timer_->is_canceled())  // If the timer is currently stopped
             {
+                // Wait for initial motor positions to be received
                 if (rclcpp::wait_for_message<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
                         motor_positions_, this->shared_from_this(), "/motor_state", std::chrono::seconds(1)))
                 {
                     uclv_seed_robotics_ros_interfaces::msg::MotorPositions filtered_positions;
+                    
+                    // Filter the received motor positions to only include those specified by the parameter
                     for (size_t i = 0; i < motor_ids_.size(); i++)
                     {
                         auto it = std::find(motor_positions_.ids.begin(), motor_positions_.ids.end(), motor_ids_[i]);
@@ -113,13 +114,9 @@ private:
                             throw std::runtime_error("Motor ID from parameter 'motor_ids' not found in received motor positions");
                         }
                     }
-                    motor_positions_ = filtered_positions;
+                    motor_positions_ = filtered_positions;  // Update the current motor positions
 
-                    // for (size_t i = 0; i < motor_positions_.positions.size(); i++)
-                    // {
-                    //     RCLCPP_INFO(this->get_logger(), "ID: %ld, Initial Position: %f", motor_positions_.ids[i], motor_positions_.positions[i]);
-                    // }
-
+                    // Start the timer to begin periodic integration updates
                     timer_->reset();
                     response->success = true;
                     response->message = "Timer started.";
@@ -127,6 +124,7 @@ private:
                 }
                 else
                 {
+                    // If motor positions are not received, log an error and throw an exception
                     RCLCPP_FATAL(this->get_logger(), "Failed to receive initial motor positions. Exiting...");
                     throw std::runtime_error("Failed to receive initial motor positions");
                 }
@@ -138,11 +136,11 @@ private:
                 RCLCPP_WARN(this->get_logger(), "Timer is already running.");
             }
         }
-        else
+        else  // If the service request data is false, stop the timer
         {
             if (!timer_->is_canceled())
             {
-                timer_->cancel();
+                timer_->cancel();  // Stop the timer
                 response->success = true;
                 response->message = "Timer stopped.";
                 RCLCPP_INFO(this->get_logger(), "Timer stopped.");
@@ -160,19 +158,17 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-
     try
     {
         auto euler_integrator_node = std::make_shared<EulerIntegrator>();
         rclcpp::spin(euler_integrator_node);
     }
-    catch (const std::exception &e)
+    catch (const std::exception &e) 
     {
         RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Exception caught: %s", e.what());
         rclcpp::shutdown();
         return 1;
     }
-
     rclcpp::shutdown();
     return 0;
 }
