@@ -23,8 +23,8 @@ public:
     rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
     EulerIntegrator()
-        : Node("euler_integrator"),  // Initialize node with name "euler_integrator"
-          dt_(this->declare_parameter<double>("dt", 0.1)),  // Get the integration time step (dt) from parameters, default to 0.1 seconds
+        : Node("euler_integrator"),
+          dt_(this->declare_parameter<double>("dt", 0.001)),  // Get the integration time step (dt) from parameters, default to 0.1 seconds
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
           proportional_result_received_(false)  // Initialize flag as false
     {
@@ -56,12 +56,10 @@ public:
     }
 
 private:
-    // Method to perform integration to update motor positions
     void integrate()
     {
-        if (proportional_result_received_)  // Check if the latest sensor data is available
+        if (proportional_result_received_)
         {
-            // Update each motor position using the Euler integration method
             for (size_t i = 0; i < motor_positions_.ids.size(); i++)
             {
                 // Update position based on force data (Z-axis force is used in this example)

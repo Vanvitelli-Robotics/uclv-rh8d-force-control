@@ -159,7 +159,7 @@ private:
                 // Calculate the error between desired and measured forces
                 double error_x = desired_forces_.forces[desired_idx].x - measured_forces_.forces[measured_idx].x;
                 double error_y = desired_forces_.forces[desired_idx].y - measured_forces_.forces[measured_idx].y;
-                double error_z = desired_forces_.forces[desired_idx].z - measured_forces_.forces[measured_idx].z;
+                double error_z =  desired_forces_.forces[desired_idx].z + (measured_forces_.forces[measured_idx].z)/1000.0;
 
                 RCLCPP_INFO(this->get_logger(), "Error for Sensor ID: %ld - X: %f, Y: %f, Z: %f",
                             sensor_id, error_x, error_y, error_z);
