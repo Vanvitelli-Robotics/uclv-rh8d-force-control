@@ -156,17 +156,19 @@ private:
                 size_t measured_idx = std::distance(measured_forces_.ids.begin(), measured_force_iter);
                 size_t desired_idx = std::distance(desired_forces_.ids.begin(), desired_force_iter);
 
+                double measured_force_abs = sqrt(pow(measured_forces_.forces[measured_idx].x,2) + pow(measured_forces_.forces[measured_idx].y,2) + pow(measured_forces_.forces[measured_idx].z,2))/1000.0;
+
                 // Calculate the error between desired and measured forces
                 double error_x = desired_forces_.forces[desired_idx].x - measured_forces_.forces[measured_idx].x;
                 double error_y = desired_forces_.forces[desired_idx].y - measured_forces_.forces[measured_idx].y;
-                double error_z =  desired_forces_.forces[desired_idx].z + (measured_forces_.forces[measured_idx].z)/1000.0;
+                double error_z =  desired_forces_.forces[desired_idx].z - measured_force_abs;
 
                 RCLCPP_INFO(this->get_logger(), "Error for Sensor ID: %ld - X: %f, Y: %f, Z: %f",
                             sensor_id, error_x, error_y, error_z);
 
                 // Apply the proportional control law
                 geometry_msgs::msg::Vector3 result_force;
-                result_force.x = gain_ * error_x;
+                result_force.x = measured_force_abs;  // questa è la norma misurata (deve andare in un nodo a parte)
                 result_force.y = gain_ * error_y;
                 result_force.z = gain_ * error_z;
 
