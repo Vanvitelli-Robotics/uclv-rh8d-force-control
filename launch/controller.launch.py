@@ -24,4 +24,12 @@ def generate_launch_description():
                 {"gain": 200.0}
             ]
         ),
+        Node(
+            output='screen',
+            package='repo_controller',
+            executable='gain',
+            name='gain',
+            parameters=[
+            ]
+        ),
     ])
