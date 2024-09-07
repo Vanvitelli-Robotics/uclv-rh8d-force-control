@@ -64,7 +64,7 @@ public:
 
         // Create a publisher to publish the control error result
         error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
-            "/result_proportional_controller_error", 1);
+            "/result_proportional_controller", 1);
     }
 
 private:
