@@ -18,7 +18,7 @@ public:
 
     // ROS interfaces
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;  // Service to start/stop the integration
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>::SharedPtr proportional_result_sub_;  // Subscription to force sensor data
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64Stamped>::SharedPtr proportional_result_sub_;  // Subscription to force sensor data
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;  // Publisher for desired motor positions
     rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
@@ -40,7 +40,7 @@ public:
             "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         // Subscribe to force sensor data from the proportional controller
-        proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
+        proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64Stamped>(
             "/result_proportional_controller", 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
         // Create a publisher for desired motor positions
