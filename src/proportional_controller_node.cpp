@@ -1,6 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/sensors_norm.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_stamped.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/motor_error.hpp" // New message for error publishing
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -28,8 +29,8 @@ public:
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>::SharedPtr measured_norm_forces_sub_;
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>::SharedPtr desired_norm_forces_sub_;
 
-    // Publisher to publish the result of the proportional control
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64Stamped>::SharedPtr result_pub_;
+    // Publisher to publish the error result
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>::SharedPtr error_pub_;
 
     // Constructor for the ProportionalController class
     ProportionalController()
@@ -61,9 +62,9 @@ public:
         desired_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
             "/cmd/desired_norm_forces", 1, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
 
-        // Create a publisher to publish the control results
-        result_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64Stamped>(
-            "/result_proportional_controller", 1);
+        // Create a publisher to publish the control error result
+        error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
+            "/result_proportional_controller_error", 1);
     }
 
 private:
@@ -81,7 +82,7 @@ private:
     {
         measured_norm_forces_ = *msg; // Update measured forces with the received message
         measured_norm_forces_received_ = true; // Set the flag indicating that measured forces have been received
-        compute_and_publish_result(); // Attempt to compute and publish the control result
+        compute_and_publish_error(); // Attempt to compute and publish the control error
     }
 
     // Callback to receive desired force messages
@@ -89,11 +90,11 @@ private:
     {
         desired_norm_forces_ = *msg; // Update desired forces with the received message
         desired_norm_forces_received_ = true; // Set the flag indicating that desired forces have been received
-        compute_and_publish_result(); // Attempt to compute and publish the control result
+        compute_and_publish_error(); // Attempt to compute and publish the control error
     }
 
-    // Function to compute the control result and publish it
-    void compute_and_publish_result()
+    // Function to compute the control error and publish it
+    void compute_and_publish_error()
     {
         // Check if the desired or measured forces data is missing
         if (!desired_norm_forces_received_ || !measured_norm_forces_received_)
@@ -101,6 +102,10 @@ private:
             RCLCPP_WARN(this->get_logger(), "Desired or measured forces data not received yet.");
             return;
         }
+
+        // Create a result message to publish the error
+        uclv_seed_robotics_ros_interfaces::msg::MotorError error_msg;
+        error_msg.header.stamp = this->now(); // Add timestamp to the message
 
         // Iterate over the motor IDs managed by the controller
         for (int64_t motor_id : motor_ids_)
@@ -148,21 +153,35 @@ private:
 
                 RCLCPP_INFO(this->get_logger(), "Error for Sensor ID: %ld - Error: %f", sensor_id, error);
 
-                // Create a message for the proportional control result
-                uclv_seed_robotics_ros_interfaces::msg::Float64Stamped result_msg;
-                result_msg.header.stamp = this->now(); // Add timestamp to the message
-                result_msg.data = gain_ * error; // Apply proportional control gain to the error
-
-                // Log the computed result
-                RCLCPP_INFO(this->get_logger(), "Computed result for Sensor ID: %ld - Norm: %f", sensor_id, result_msg.data);
-
-                // Publish the control result
-                result_pub_->publish(result_msg);
+                // Add the error to the error message
+                error_msg.motor_ids.push_back(motor_id);
+                error_msg.errors.push_back(gain_ * error); // Scale error by proportional gain
             }
         }
+
+        // Publish the error message
+        error_pub_->publish(error_msg);
 
         // Reset the flags to ensure data is fresh for the next computation
         desired_norm_forces_received_ = false;
         measured_norm_forces_received_ = false;
     }
 };
+
+int main(int argc, char *argv[])
+{
+    rclcpp::init(argc, argv);
+    try
+    {
+        auto proportional_controller_node = std::make_shared<ProportionalController>();
+        rclcpp::spin(proportional_controller_node);
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Exception caught: %s", e.what());
+        rclcpp::shutdown();
+        return 1;
+    }
+    rclcpp::shutdown();
+    return 0;
+}
