@@ -5,7 +5,8 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Define common parameters
     common_params = {
-        "motor_ids": [36, 37]
+        "motor_ids": [36, 37],
+        "motor_thresholds": [100, 3995]
     }
 
     return LaunchDescription([
