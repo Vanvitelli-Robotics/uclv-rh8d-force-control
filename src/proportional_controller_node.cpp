@@ -1,5 +1,5 @@
 #include "rclcpp/rclcpp.hpp"
-#include "uclv_seed_robotics_ros_interfaces/msg/fts3_sensors.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/sensors_norm.hpp"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -29,7 +29,7 @@ public:
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>::SharedPtr desired_norm_forces_sub_;
 
     // Publisher to publish the result of the proportional control
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr result_pub_;
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64Stamped>::SharedPtr result_pub_;
 
     ProportionalController()
         : Node("proportional_controller"),
@@ -109,7 +109,7 @@ private:
     }
     
     // Initialize the message to publish
-    uclv_seed_robotics_ros_interfaces::msg::Float64StampedArrayWithIds result_msg;
+    uclv_seed_robotics_ros_interfaces::msg::SensorsNorm result_msg;
     result_msg.header.stamp = this->now(); // Timestamp the result message
 
     // Iterate over the motor IDs that the controller manages
