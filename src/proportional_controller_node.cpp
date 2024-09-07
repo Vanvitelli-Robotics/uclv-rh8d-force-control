@@ -101,21 +101,21 @@ private:
     // Function to compute the control result and publish it
    void compute_and_publish_result()
 {
-    // Check if desired or measured forces data is missing
-    if (desired_norm_forces_sub_.norm.empty() || measured_norm_forces_sub_.norm.empty())
-    {s
+    // Verifica se i dati delle forze desiderate o misurate sono mancanti
+    if (desired_norm_forces_.ids.empty() || measured_norm_forces_.ids.empty())
+    {
         RCLCPP_WARN(this->get_logger(), "Desired or measured forces vectors are empty.");
         return;
     }
     
-    // Initialize the message to publish
+    // Inizializza il messaggio da pubblicare
     uclv_seed_robotics_ros_interfaces::msg::Float64Stamped result_msg;
-    result_msg.header.stamp = this->now(); // Timestamp the result message
+    result_msg.header.stamp = this->now(); // Aggiungi il timestamp al messaggio
 
-    // Iterate over the motor IDs that the controller manages
+    // Itera sugli ID dei motori gestiti dal controller
     for (int64_t motor_id : motor_ids_)
     {
-        // Find the motor_id in the sensor map
+        // Trova l'ID del motore nella mappa dei sensori
         auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id);
         if (sensor_ids_iter == motor_to_sensor_map_.end())
         {
@@ -123,69 +123,59 @@ private:
             continue;
         }
 
-        // If the id is found in the map, get the second element of the map
+        // Ottieni gli ID dei sensori associati
         const auto &sensor_ids = sensor_ids_iter->second;
-        
-        // Log sensor_ids for the current motor_id
-        std::string sensor_ids_str;
-        for (auto sensor_id : sensor_ids)
-        {
-            sensor_ids_str += std::to_string(sensor_id) + " ";
-        }
-        // RCLCPP_INFO(this->get_logger(), "Motor ID: %ld maps to Sensor IDs: %s", motor_id, sensor_ids_str.c_str());
 
-        // For each sensor id associated with the motor
+        // Itera sugli ID dei sensori associati al motore
         for (int64_t sensor_id : sensor_ids)
         {
-            auto measured_force_iter = std::find(measured_norm_forces_sub_.ids.begin(), measured_norm_forces_sub_.ids.end(), sensor_id);
-            auto desired_force_iter = std::find(desired_norm_forces_sub_.ids.begin(), desired_norm_forces_sub_.ids.end(), sensor_id);
+            // Trova l'indice dell'ID sensore nelle liste delle forze desiderate e misurate
+            auto measured_force_iter = std::find(measured_norm_forces_.ids.begin(), measured_norm_forces_.ids.end(), sensor_id);
+            auto desired_force_iter = std::find(desired_norm_forces_.ids.begin(), desired_norm_forces_.ids.end(), sensor_id);
 
-            // Check if the id is found in both the measured forces and desired forces lists
-            if (measured_force_iter == measured_norm_forces_sub_.ids.end())
+            // Verifica se l'ID del sensore si trova sia nelle liste delle forze misurate che desiderate
+            if (measured_force_iter == measured_norm_forces_.ids.end())
             {
                 RCLCPP_FATAL(this->get_logger(), "Sensor ID: %ld not found in measured forces", sensor_id);
                 continue;
             }
-            if (desired_force_iter == desired_norm_forces_sub_.ids.end())
+            if (desired_force_iter == desired_norm_forces_.ids.end())
             {
                 RCLCPP_FATAL(this->get_logger(), "Sensor ID: %ld not found in desired forces", sensor_id);
                 continue;
             }
 
-            // For each found sensor, get the id within the measured and desired forces
-            size_t measured_idx = std::distance(measured_norm_forces_sub_.ids.begin(), measured_force_iter);
-            size_t desired_idx = std::distance(desired_norm_forces_sub_.ids.begin(), desired_force_iter);
+            // Ottieni gli indici per le forze misurate e desiderate
+            size_t measured_idx = std::distance(measured_norm_forces_.ids.begin(), measured_force_iter);
+            size_t desired_idx = std::distance(desired_norm_forces_.ids.begin(), desired_force_iter);
 
-            double measured_norm = measured_norm_forces_sub_.norm[measured_idx];
-            double desired_norm = desired_norm_forces_sub_.norm[desired_idx];
+            // Estrai le norme misurate e desiderate
+            double measured_norm = measured_norm_forces_.norm[measured_idx].data; // Estrai il campo `data`
+            double desired_norm = desired_norm_forces_.norm[desired_idx].data; // Estrai il campo `data`
 
-            // Calculate the error between desired and measured norms
+            // Calcola l'errore tra le norme desiderate e misurate
             double error = desired_norm - measured_norm;
 
-            RCLCPP_INFO(this->get_logger(), "Error for Sensor ID: %ld - Error: %f",
-                        sensor_id, error);
+            RCLCPP_INFO(this->get_logger(), "Error for Sensor ID: %ld - Error: %f", sensor_id, error);
 
-            // Apply the proportional control law
-            uclv_seed_robotics_ros_interfaces::msg::Float64Stamped result_norm;
-            result_norm.header = result_msg.header;
-            result_norm.data = gain_ * error; // Apply proportional control to the error
+            // Crea un messaggio per il risultato del controllo proporzionale
+            result_msg.header = result_msg.header; // Usa l'header già impostato
+            result_msg.data = gain_ * error; // Applica il controllo proporzionale all'errore
 
-            // Append the computed result to the result message
-            result_msg.ids.push_back(motor_id);
-            result_msg.norm.push_back(result_norm);
+            // Log del risultato computato
+            RCLCPP_INFO(this->get_logger(), "Computed result for Sensor ID: %ld - Norm: %f", sensor_id, result_msg.data);
 
-            RCLCPP_INFO(this->get_logger(), "Computed result for Motor ID: %ld - Norm: %f",
-                        motor_id, result_norm.data);
+            // Pubblica il risultato del controllo
+            result_pub_->publish(result_msg);
         }
     }
 
-    // Publish the computed control result
-    result_pub_->publish(result_msg);
-
-    // Reset flags to ensure fresh data for next computation
-    desired_forces_received_ = false;
-    measured_forces_received_ = false;
+    // Reimposta i flag per garantire che i dati siano freschi per il prossimo calcolo
+    desired_norm_forces_received_ = false;
+    measured_norm_forces_received_ = false;
 }
+
+
 
 };
 
