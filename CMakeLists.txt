@@ -26,9 +26,9 @@ ament_target_dependencies(
   "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
 )
 
-add_executable(gain_node src/gain_node.cpp)
+add_executable(force_norm src/force_norm_node.cpp)
 ament_target_dependencies(
-  gain_node
+  force_norm
   "rclcpp"
   "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
 )
@@ -36,7 +36,7 @@ ament_target_dependencies(
 install(TARGETS 
       euler_integrator_controller
       proportional_controller
-      gain_node
+      force_norm
       DESTINATION 
         lib/${PROJECT_NAME})
 
