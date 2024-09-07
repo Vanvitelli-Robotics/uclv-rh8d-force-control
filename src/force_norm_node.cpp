@@ -70,10 +70,6 @@ private:
         // Publish the message with all norms and corresponding IDs
         publisher_->publish(norm_msg);
     }
-
-    // Subscriber and Publisher members
-    rclcpp::Subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>::SharedPtr subscription_;
-    rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::SensorNorm>::SharedPtr publisher_;
 };
 
 };
