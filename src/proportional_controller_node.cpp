@@ -103,14 +103,14 @@ private:
 {
     // Check if desired or measured forces data is missing
     if (desired_norm_forces_sub_.norm.empty() || measured_norm_forces_sub_.norm.empty())
-    {
+    {s
         RCLCPP_WARN(this->get_logger(), "Desired or measured forces vectors are empty.");
         return;
     }
     
     // Initialize the message to publish
     uclv_seed_robotics_ros_interfaces::msg::SensorsNorm result_msg;
-    result_msg.header.stamp = this->now(); // Timestamp the result message
+    result_msg.norm.header.stamp = this->now(); // Timestamp the result message
 
     // Iterate over the motor IDs that the controller manages
     for (int64_t motor_id : motor_ids_)
