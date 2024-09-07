@@ -36,7 +36,7 @@ private:
         // Create the message to publish
         uclv_seed_robotics_interfaces::msg::SensorsNorm norm_msg;
         norm_msg.ids = msg->ids; // Copy the sensor IDs from the incoming message
-        norm_value.header = msg->header; // Copy the header from the incoming message
+        norm_value.norm.header = msg->header; // Copy the header from the incoming message
 
 
         // Initialize a map to store norms for each ID
