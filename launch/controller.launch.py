@@ -5,8 +5,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Define common parameters
     common_params = {
-        "motor_ids": [36, 37],
-        "motor_thresholds": [100, 3995]
+        "motor_ids": [36, 37]
     }
 
     return LaunchDescription([
@@ -17,7 +16,10 @@ def generate_launch_description():
             name='euler_integrator',
             parameters=[
                 common_params,  # Use common parameters
-                {"dt": 0.001}   # Additional parameters specific to this node
+                {
+                    "dt": 0.001,
+                    "motor_thresholds": [100, 3995]
+                }   # Additional parameters specific to this node
             ]
         ),
         Node(
