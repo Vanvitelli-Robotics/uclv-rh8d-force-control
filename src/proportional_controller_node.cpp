@@ -109,8 +109,8 @@ private:
     }
     
     // Initialize the message to publish
-    uclv_seed_robotics_ros_interfaces::msg::SensorsNorm result_msg;
-    result_msg.norm.header.stamp = this->now(); // Timestamp the result message
+    uclv_seed_robotics_ros_interfaces::msg::Float64Stamped result_msg;
+    result_msg.header.stamp = this->now(); // Timestamp the result message
 
     // Iterate over the motor IDs that the controller manages
     for (int64_t motor_id : motor_ids_)
