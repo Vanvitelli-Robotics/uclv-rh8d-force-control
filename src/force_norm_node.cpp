@@ -73,7 +73,7 @@ private:
 
     // Subscriber and Publisher members
     rclcpp::Subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>::SharedPtr subscription_;
-    rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::Float64StampedArrayWithIds>::SharedPtr publisher_;
+    rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::SensorNorm>::SharedPtr publisher_;
 };
 
 };
