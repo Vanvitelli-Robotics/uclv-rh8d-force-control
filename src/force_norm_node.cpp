@@ -7,10 +7,16 @@
 
 using std::placeholders::_1;
 
-// Node class definition for force norm calculation
 class ForceNorme : public rclcpp::Node
 {
 public:
+
+    // Subscription to receive sensor state
+    rclcpp::Subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>::SharedPtr subscription_;
+
+    // Publisher to publish the result of norm calculation
+    rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::Float64Stamped>::SharedPtr publisher_;
+
     ForceNorme()
     : Node("force_norm")
     {
@@ -27,31 +33,39 @@ private:
     // Callback function to process the incoming sensor state message
     void sensorStateCallback(const uclv_seed_robotics_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
+        // Iterate through each force vector in the received message
         for (const auto& force : msg->forces)
         {
             // Calculate the norm (magnitude) of the force vector
-            double norm = std::sqrt(std::pow(force.x, 2) + (std::pow(force.y, 2) + (std::pow(force.y, 2))/1000.0; // /1000.0 cause mN -> N
+            // The values are assumed to be in mN, so they are converted to N by dividing by 1000.0
+            double norm = std::sqrt(std::pow(force.x, 2) + std::pow(force.y, 2) + std::pow(force.z, 2)) / 1000.0;
 
             // Create the message to publish
             uclv_seed_robotics_interfaces::msg::Float64Stamped norm_msg;
-            norm_msg.header = msg->header; // Keep the same header as the incoming message
-            norm_msg.data = norm;
+            norm_msg.header = msg->header; // Copy the header from the incoming message
+            norm_msg.data = norm; // Set the computed norm as the data
 
             // Publish the calculated norm
             publisher_->publish(norm_msg);
         }
     }
 
-    // Subscriber and Publisher members
-    rclcpp::Subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>::SharedPtr subscription_;
-    rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::Float64Stamped>::SharedPtr publisher_;
 };
 
-// Main function for running the node
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<ForceNorme>());
+    try
+    {
+        auto force_norm_node = std::make_shared<ForceNorme>();
+        rclcpp::spin(force_norm_node);
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Exception caught: %s", e.what());
+        rclcpp::shutdown();
+        return 1;
+    }
     rclcpp::shutdown();
     return 0;
 }
