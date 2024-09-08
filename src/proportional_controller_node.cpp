@@ -35,7 +35,6 @@ public:
     // Constructor for the ProportionalController class
     ProportionalController()
         : Node("proportional_controller"),
-          gain_(this->declare_parameter<double>("gain", 1.0)), // Declare and initialize the control gain parameter
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())) // Declare and initialize the motor IDs parameter
     {
         // Check that the gain parameter is set correctly (non-negative)
@@ -65,6 +64,10 @@ public:
         // Create a publisher to publish the control error result
         error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
             "/result_proportional_controller", 1);
+        
+        // Create a service to dynamically set the gain
+        set_gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
+            "set_gain", std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:
@@ -93,6 +96,26 @@ private:
         compute_and_publish_error(); // Attempt to compute and publish the control error
     }
 
+    // Callback for the service to set the gain
+    void set_gain_callback(const uclv_seed_robotics_ros_interfaces::srv::SetGain::Request::SharedPtr request,
+                           uclv_seed_robotics_ros_interfaces::srv::SetGain::Response::SharedPtr response)
+    {
+        // Check if the gain value is non-negative
+        if (request->gain < 0.0)
+        {
+            response->success = false;
+            response->message = "Gain must be non-negative.";
+            RCLCPP_WARN(this->get_logger(), "Attempted to set a negative gain.");
+        }
+        else
+        {
+            gain_ = request->gain; // Update the gain value
+            response->success = true;
+            response->message = "Gain updated successfully.";
+            RCLCPP_INFO(this->get_logger(), "Gain updated to: %f", gain_);
+        }
+    }
+    
     // Function to compute the control error and publish it
     void compute_and_publish_error()
     {
