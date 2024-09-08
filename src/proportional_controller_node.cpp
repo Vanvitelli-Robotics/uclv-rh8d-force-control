@@ -35,6 +35,7 @@ public:
     // Constructor for the ProportionalController class
     ProportionalController()
         : Node("proportional_controller"),
+            gain_(1.0) // Default gain value
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())) // Declare and initialize the motor IDs parameter
     {
         // Check that the gain parameter is set correctly (non-negative)
