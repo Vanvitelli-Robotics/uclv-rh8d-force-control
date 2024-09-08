@@ -29,7 +29,6 @@ def generate_launch_description():
             name='proportional_controller',
             parameters=[
                 common_params,  # Use common parameters
-                {"gain": 200.0}  # Additional parameters specific to this node
             ]
         ),
         Node(
