@@ -11,6 +11,11 @@ class ForceNorm : public rclcpp::Node
 {
 public:
 
+    std::string sensor_state_topic_;
+    std::string norm_forces_topic_;
+
+    
+    
     // Subscription to receive sensor state
     rclcpp::Subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>::SharedPtr subscription_;
 
@@ -20,13 +25,17 @@ public:
     ForceNorm()
     : Node("force_norm")
     {
+
+        sensor_state_topic_ = this->declare_parameter<std::string>("sensor_state_topic", "sensor_state");
+        norm_forces_topic_ = this->declare_parameter<std::string>("norm_forces_topic_", "norm_forces");
+        
         // Subscriber to the 'sensor_state' topic
         subscription_ = this->create_subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>(
-            "sensor_state", 10, std::bind(&ForceNorme::sensorStateCallback, this, _1));
+            sensor_state_topic_, 10, std::bind(&ForceNorme::sensorStateCallback, this, _1));
 
         // Publisher to the 'norm_forces' topic
         publisher_ = this->create_publisher<uclv_seed_robotics_interfaces::msg::SensorsNorm>(
-            "norm_forces", 10);
+            norm_forces_topic_, 10);
     }
 
 private:
