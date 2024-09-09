@@ -7,7 +7,7 @@
 
 using std::placeholders::_1;
 
-class ForceNorme : public rclcpp::Node
+class ForceNorm : public rclcpp::Node
 {
 public:
 
@@ -17,7 +17,7 @@ public:
     // Publisher to publish the result of norm calculation
     rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::SensorsNorm>::SharedPtr publisher_;
 
-    ForceNorme()
+    ForceNorm()
     : Node("force_norm")
     {
         // Subscriber to the 'sensor_state' topic
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     rclcpp::init(argc, argv);
     try
     {
-        auto force_norm_node = std::make_shared<ForceNorme>();
+        auto force_norm_node = std::make_shared<ForceNorm>();
         rclcpp::spin(force_norm_node);
     }
     catch (const std::exception &e)
