@@ -16,16 +16,19 @@ public:
     rclcpp::Publisher<uclv_seed_robotics_interfaces::msg::SensorsNorm>::SharedPtr publisher_;
 
     ForceNorm()
-        : Node("force_norm")
-    {
-        sensor_state_topic_ = this->declare_parameter<std::string>("sensor_state_topic", "sensor_state");
-        norm_forces_topic_ = this->declare_parameter<std::string>("norm_forces_topic", "norm_forces");
+    : Node("force_norm"),
+      sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
+      norm_forces_topic_(this->declare_parameter<std::string>("norm_forces_topic", "norm_forces"))
+{
+    // Crea la subscription al topic 'sensor_state'
+    subscription_ = this->create_subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>(
+        sensor_state_topic_, 10, std::bind(&ForceNorm::sensorStateCallback, this, _1));
 
-        subscription_ = this->create_subscription<uclv_seed_robotics_interfaces::msg::FTS3Sensors>(
-            sensor_state_topic_, 10, std::bind(&ForceNorm::sensorStateCallback, this, _1));
-        publisher_ = this->create_publisher<uclv_seed_robotics_interfaces::msg::SensorsNorm>(
-            norm_forces_topic_, 10);
-    }
+    // Crea il publisher al topic 'norm_forces'
+    publisher_ = this->create_publisher<uclv_seed_robotics_interfaces::msg::SensorsNorm>(
+        norm_forces_topic_, 10);
+}
+
 
 private:
     // Callback function to process the incoming sensor state message
