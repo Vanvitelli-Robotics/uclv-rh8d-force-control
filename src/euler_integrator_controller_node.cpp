@@ -25,7 +25,7 @@ public:
     rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
     EulerIntegrator()
-        : Node("euler_integrator"),
+        : Node("euler_integrator")
           dt_(this->declare_parameter<double>("dt", 0.001)),  // Get the integration time step (dt) from parameters
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
           motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
