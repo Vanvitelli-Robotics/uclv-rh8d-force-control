@@ -172,8 +172,8 @@ private:
                 size_t desired_id = std::distance(desired_norm_forces_.ids.begin(), desired_force_iter);
 
                 // Extract measured and desired norms
-                double measured_norm = measured_norm_forces_.norm[measured_id].data; // Extract the `data` field from measured norm
-                double desired_norm = desired_norm_forces_.norm[desired_id].data; // Extract the `data` field from desired norm
+                double measured_norm = measured_norm_forces_.norms[measured_id];
+                double desired_norm = desired_norm_forces_.norms[desired_id]; 
 
                 // Calculate the error between desired and measured norms
                 double error = desired_norm - measured_norm;
