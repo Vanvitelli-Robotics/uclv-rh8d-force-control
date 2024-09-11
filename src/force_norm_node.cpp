@@ -19,40 +19,29 @@ public:
     : Node("force_norm"),
       sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
       norm_forces_topic_(this->declare_parameter<std::string>("norm_forces_topic", "norm_forces"))
-{
-    // Crea la subscription al topic 'sensor_state'
-    subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
-        sensor_state_topic_, 10, std::bind(&ForceNorm::sensorStateCallback, this, _1));
+    {
+        subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
+            sensor_state_topic_, 10, std::bind(&ForceNorm::sensorStateCallback, this, _1));
 
-    // Crea il publisher al topic 'norm_forces'
-    publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
-        norm_forces_topic_, 10);
-}
-
+        publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
+            norm_forces_topic_, 10);
+    }
 
 private:
-    // Callback function to process the incoming sensor state message
     void sensorStateCallback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
-        // Create the message to publish
         uclv_seed_robotics_ros_interfaces::msg::SensorsNorm norm_msg;
+        norm_msg.header.stamp = this->now();
         norm_msg.ids = msg->ids;
-        norm_msg.header = msg->header;
+        norm_msg.norms.resize(msg->forces_x.size());
 
-        // Iterate through each force vector in the received message
-        for (size_t i = 0; i < msg->forces.size(); ++i)
+        for (size_t i = 0; i < msg->forces_x.size(); ++i)
         {
-            const auto &force = msg->forces[i];
+            norm_msg.norms[i] = std::sqrt(std::pow(msg->forces_x[i], 2) + msg->forces_y[i], 2) +msg->forces_z[i], 2))/1000.0;
 
-            // Calculate the norm (magnitude) of the force vector
-            // The values are assumed to be in mN, so they are converted to N by dividing by 1000.0
-            double norm_value = std::sqrt(std::pow(force.x, 2) + std::pow(force.y, 2) + std::pow(force.z, 2)) / 1000.0;
-
-            // Add the computed norm to the array
-            norm_msg.norms.push_back(norm_value);
+            RCLCPP_INFO(this->get_logger(), "Calculated norm for sensor ID: %d, Norm: %f", msg->ids[i], norm_msg.norms[i]);
         }
 
-        // Publish the message with all norms and corresponding IDs
         publisher_->publish(norm_msg);
     }
 };
@@ -60,17 +49,8 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    try
-    {
-        auto force_norm_node = std::make_shared<ForceNorm>();
-        rclcpp::spin(force_norm_node);
-    }
-    catch (const std::exception &e)
-    {
-        RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Exception caught: %s", e.what());
-        rclcpp::shutdown();
-        return 1;
-    }
+    auto force_norm_node = std::make_shared<ForceNorm>();
+    rclcpp::spin(force_norm_node);
     rclcpp::shutdown();
     return 0;
 }
