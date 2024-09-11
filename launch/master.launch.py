@@ -4,6 +4,9 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
+
+# TODO: check qui pare non funzioni
+
 def generate_launch_description():
     # Include the hand_driver launch file
     hand_driver_launch = IncludeLaunchDescription(

@@ -2,6 +2,7 @@
 #include "uclv_seed_robotics_ros_interfaces/msg/sensors_norm.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_error.hpp" // New message for error publishing
+#include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -31,6 +32,8 @@ public:
 
     // Publisher to publish the error result
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>::SharedPtr error_pub_;
+
+    rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr set_gain_service_;
 
     // Constructor for the ProportionalController class
     ProportionalController()
@@ -98,8 +101,8 @@ private:
     }
 
     // Callback for the service to set the gain
-    void set_gain_callback(const uclv_seed_robotics_ros_interfaces::srv::SetGain::Request::SharedPtr request,
-                           uclv_seed_robotics_ros_interfaces::srv::SetGain::Response::SharedPtr response)
+    void set_gain_callback(const std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SetGain::Request> request,
+                           std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SetGain::Response> response)
     {
         // Check if the gain value is non-negative
         if (request->gain < 0.0)

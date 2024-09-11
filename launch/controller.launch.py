@@ -31,14 +31,14 @@ def generate_launch_description():
                 common_params,  # Use common parameters
             ]
         ),
-        Node(
-            output='screen',
-            package='repo_controller',
-            executable='force_norm',
-            name='force_norm',
-            parameters=[
-                # {'sensor_state_topic': 'your_new_sensor_state_topic'},
-                # {'norm_forces_topic': 'your_new_norm_forces_topic'},
-            ]
-        ),
+        # Node(
+        #     output='screen',
+        #     package='repo_controller',
+        #     executable='force_norm',
+        #     name='force_norm',
+        #     parameters=[
+        #         # {'sensor_state_topic': 'your_new_sensor_state_topic'},
+        #         # {'norm_forces_topic': 'your_new_norm_forces_topic'},
+        #     ]
+        # ),
     ])
