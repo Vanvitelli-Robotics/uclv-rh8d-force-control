@@ -1,6 +1,5 @@
 #include "rclcpp/rclcpp.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/sensors_norm.hpp"
-#include "uclv_seed_robotics_ros_interfaces/msg/float64_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_error.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"
 #include <stdexcept>
