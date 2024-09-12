@@ -13,6 +13,7 @@ class ProportionalController : public rclcpp::Node
 public:
     double gain_; // Proportional gain value for the controller
     std::vector<int64_t> motor_ids_; // List of motor IDs managed by the controller
+    std::vector<std::string> motor_sensor_mappings_; // Mapping motor ID - Sensors
 
     uclv_seed_robotics_ros_interfaces::msg::SensorsNorm desired_norm_forces_;  // Message for desired normalized forces
     uclv_seed_robotics_ros_interfaces::msg::SensorsNorm measured_norm_forces_; // Message for measured normalized forces
@@ -37,7 +38,8 @@ public:
     ProportionalController()
         : Node("proportional_controller"),  // Initialize the node with the name "proportional_controller"
           gain_(this->declare_parameter<double>("gain", 1.0)), // Initialize gain from the ROS parameter (default: 1.0)
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>()))  // Initialize motor IDs from the ROS parameter
+          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Initialize motor IDs from the ROS parameter
+          motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>()))
     {
         // Check if the gain is non-negative; terminate if not
         if (gain_ < 0.0)
@@ -75,12 +77,68 @@ public:
 
 private:
     // Initialize the mapping between motor IDs and their associated sensor IDs
-    void initialize_motor_to_sensor_map()
+//    void initialize_motor_to_sensor_map()
+//    {
+//        motor_to_sensor_map_[35] = {0};  // Motor ID 35 is associated with Sensor ID 0
+//        motor_to_sensor_map_[36] = {1};  // Motor ID 36 is associated with Sensor ID 1
+//        motor_to_sensor_map_[37] = {2};  // Motor ID 37 is associated with Sensor ID 2
+//        motor_to_sensor_map_[38] = {3, 4}; // Motor ID 38 is associated with Sensor IDs 3 and 4
+//    }
+
+void initialize_motor_to_sensor_map()
     {
-        motor_to_sensor_map_[35] = {0};  // Motor ID 35 is associated with Sensor ID 0
-        motor_to_sensor_map_[36] = {1};  // Motor ID 36 is associated with Sensor ID 1
-        motor_to_sensor_map_[37] = {2};  // Motor ID 37 is associated with Sensor ID 2
-        motor_to_sensor_map_[38] = {3, 4}; // Motor ID 38 is associated with Sensor IDs 3 and 4
+   //     std::vector<std::string> motor_sensor_mappings = 
+   //         this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>());
+
+        if (motor_sensor_mappings.empty())
+        {
+            RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_sensor_mappings' is empty or not set. Exiting...");
+            throw std::runtime_error("Parameter 'motor_sensor_mappings' is empty or not set");
+        }
+
+        for (const auto& mapping : motor_sensor_mappings)
+        {
+            std::istringstream iss(mapping);
+            int64_t motor_id;
+            std::vector<int64_t> sensor_ids;
+            char delimiter;
+
+            if (!(iss >> motor_id >> delimiter))
+            {
+                RCLCPP_ERROR(this->get_logger(), "Invalid mapping format: %s", mapping.c_str());
+                continue;
+            }
+
+            int64_t sensor_id;
+            while (iss >> sensor_id)
+            {
+                sensor_ids.push_back(sensor_id);
+                iss >> delimiter; // consume the comma if present
+            }
+
+            if (sensor_ids.empty())
+            {
+                RCLCPP_ERROR(this->get_logger(), "No sensor IDs found for motor ID: %ld", motor_id);
+                continue;
+            }
+
+            motor_to_sensor_map_[motor_id] = sensor_ids;
+            RCLCPP_INFO(this->get_logger(), "Mapped motor ID %ld to sensor IDs: %s", 
+                        motor_id, [&sensor_ids]() {
+                            std::ostringstream oss;
+                            for (size_t i = 0; i < sensor_ids.size(); ++i) {
+                                if (i > 0) oss << ", ";
+                                oss << sensor_ids[i];
+                            }
+                            return oss.str();
+                        }().c_str());
+        }
+
+        if (motor_to_sensor_map_.empty())
+        {
+            RCLCPP_FATAL(this->get_logger(), "No valid motor-to-sensor mappings were created. Exiting...");
+            throw std::runtime_error("No valid motor-to-sensor mappings were created");
+        }
     }
 
     // Callback function for receiving measured normalized forces
