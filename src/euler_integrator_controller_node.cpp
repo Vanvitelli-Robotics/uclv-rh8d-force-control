@@ -70,37 +70,37 @@ public:
 private:
     // Euler integration function with motor thresholds
     void integrate()
+{
+    if (proportional_result_received_)
     {
-        if (proportional_result_received_)
+        for (size_t i = 0; i < motor_positions_.ids.size(); i++)
         {
-            for (size_t i = 0; i < motor_positions_.ids.size(); i++)
+            // Find the corresponding motor ID in the proportional result
+            auto it = std::find(proportional_result_->motor_ids.begin(), proportional_result_->motor_ids.end(), motor_positions_.ids[i]);
+            if (it != proportional_result_->motor_ids.end())
             {
-                // Find the corresponding motor ID in the proportional result
-                auto it = std::find(proportional_result_->motor_ids.begin(), proportional_result_->motor_ids.end(), motor_positions_.ids[i]);
-                if (it != proportional_result_->motor_ids.end())
-                {
-                    size_t index = std::distance(proportional_result_->motor_ids.begin(), it);
-                    // Apply Euler integration based on the error
-                    motor_positions_.positions[i] += dt_ * proportional_result_->errors[index];
+                size_t index = std::distance(proportional_result_->motor_ids.begin(), it);
+                // Apply Euler integration based on the error
+                motor_positions_.positions[i] += dt_ * proportional_result_->errors[index];
 
-                    // TODO: soglie motori
-                    // // Apply threshold limits
-                    // motor_positions_.positions[i] = std::clamp(
-                    //     motor_positions_.positions[i], 
-                    //     static_cast<double>(motor_thresholds_[0]), 
-                    //     static_cast<double>(motor_thresholds_[1])
-                    // );
-                }
+                // Apply threshold limits
+                motor_positions_.positions[i] = std::clamp(
+                    motor_positions_.positions[i], 
+                    static_cast<double>(motor_thresholds_[0]), 
+                    static_cast<double>(motor_thresholds_[1])
+                );
             }
+        }
 
-            // Publish the updated motor positions
-            desired_position_pub_->publish(motor_positions_);
-        }
-        else
-        {
-            RCLCPP_WARN(this->get_logger(), "Proportional result not received yet.");
-        }
+        // Publish the updated motor positions
+        desired_position_pub_->publish(motor_positions_);
     }
+    else
+    {
+        RCLCPP_WARN(this->get_logger(), "Proportional result not received yet.");
+    }
+}
+
 
     // Callback function for receiving proportional controller results
     void proportional_result_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorError::SharedPtr msg)
