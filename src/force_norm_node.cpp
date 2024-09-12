@@ -33,11 +33,12 @@ private:
         uclv_seed_robotics_ros_interfaces::msg::SensorsNorm norm_msg;
         norm_msg.header.stamp = this->now();
         norm_msg.ids = msg->ids;
-        norm_msg.norms.resize(msg->forces_x.size());
+        norm_msg.norms.resize(msg->forces.size());
 
-        for (size_t i = 0; i < msg->forces_x.size(); ++i)
+        for (size_t i = 0; i < msg->forces.size(); ++i)
         {
-            norm_msg.norms[i] = std::sqrt(std::pow(msg->forces_x[i], 2) + msg->forces_y[i], 2) +msg->forces_z[i], 2))/1000.0;
+            // Calcolo della norma della forza 3D
+            norm_msg.norms[i] = std::sqrt(std::pow(msg->forces[i].x, 2) + std::pow(msg->forces[i].y, 2) + std::pow(msg->forces[i].z, 2)) / 1000.0;
 
             RCLCPP_INFO(this->get_logger(), "Calculated norm for sensor ID: %d, Norm: %f", msg->ids[i], norm_msg.norms[i]);
         }
