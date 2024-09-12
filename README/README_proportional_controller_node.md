@@ -1,111 +1,123 @@
 # Proportional Controller Node
 
 ## Overview
-`proportional_controller_node` implements a proportional control strategy for a robotic hand using force-torque sensors. It receives desired and measured force values, computes the error, and publishes the corrected forces based on a proportional gain.
 
-## Parameters
-- **gain** (double): The proportional gain used in the control algorithm. Must be non-negative.
-- **motor_ids** (vector<int64_t>): A list of motor IDs that the node controls.
+`proportional_controller_node` is a proportional controller implemented in C++ for the ROS 2 framework. Its primary purpose is to compute the error between desired and measured normalized forces for a group of motors and apply a proportional gain to achieve precise motor control.
 
-## Topics
+## Main Functionality
 
-### Subscribed Topics
-- **/sensor_state** (`uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors`): Receives the measured forces from the sensors.
-- **/desired_forces** (`uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors`): Receives the desired forces to be applied.
+- **Receives Measured Normalized Forces**: Subscribes to sensor data that provides the measured normalized forces associated with each motor.
+- **Receives Desired Normalized Forces**: Subscribes to a topic to receive desired normalized forces, which act as target values for control.
+- **Calculates Control Errors**: Computes the control error for each motor based on the difference between the desired and measured forces.
+- **Publishes Control Errors**: Applies the proportional gain to the computed errors and publishes the results for each motor.
+- **Allows Dynamic Gain Adjustment**: Provides a service that enables the gain value to be dynamically updated during runtime.
 
-### Published Topics
-- **/result_proportional_controller** (`uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors`): Publishes the corrected forces computed by the proportional controller.
+## Node Details
 
-## Node Functionality
+### Parameters
 
-### Initialization
-- The node is initialized with parameters `gain` and `motor_ids`.
-- A check ensures that the `gain` parameter is non-negative.
-- A check ensures that the `motor_ids` parameter is not empty.
+1. **`gain`** (double, default: 1.0)  
+   The proportional gain value used in the control algorithm. Must be non-negative.
 
-### Motor-to-Sensor Mapping
-The following mappings are established between motor IDs and sensor IDs:
-- Motor ID 35 -> Sensor ID 0
-- Motor ID 36 -> Sensor ID 1
-- Motor ID 37 -> Sensor ID 2
-- Motor ID 38 -> Sensor IDs 3 and 4
+2. **`motor_ids`** (list of int64, default: empty)  
+   The list of motor IDs managed by this controller. This parameter must be set; otherwise, the node will terminate with an error.
+
+### Subscriptions
+
+1. **`norm_forces`** (`uclv_seed_robotics_ros_interfaces/msg/SensorsNorm`)  
+   Topic where the node subscribes to receive the measured normalized forces from the sensors.  
+   **Message Fields**:
+   - `header` (std_msgs/Header): The standard ROS 2 message header.
+   - `ids` (int64[]): List of sensor IDs.
+   - `norms` (float64[]): List of corresponding normalized force values for each sensor.
+
+2. **`/cmd/desired_norm_forces`** (`uclv_seed_robotics_ros_interfaces/msg/SensorsNorm`)  
+   Topic where the node subscribes to receive the desired normalized forces to be achieved by the motors.  
+   **Message Fields**:  
+   - Same as above.
+
+### Publisher
+
+1. **`/result_proportional_controller`** (`uclv_seed_robotics_ros_interfaces/msg/MotorError`)  
+   Topic where the node publishes the computed motor errors.  
+   **Message Fields**:
+   - `header` (std_msgs/Header): The standard ROS 2 message header.
+   - `motor_ids` (uint16[]): List of motor IDs for which the errors are computed.
+   - `errors` (float64[]): Corresponding list of computed errors for each motor.
+
+### Service
+
+1. **`set_gain`** (`uclv_seed_robotics_ros_interfaces/srv/SetGain`)  
+   Service that allows dynamic updating of the proportional gain.  
+   **Request Fields**:
+   - `gain` (float64): The new gain value to be set.  
+   **Response Fields**:
+   - `success` (bool): Indicates if the gain update was successful.
+   - `message` (string): Provides feedback or an error message about the gain update request.
 
 ### Callbacks
-#### `sensor_state_callback`
-- Receives the measured forces and updates the `measured_forces_` member variable.
-- Logs the received forces for each sensor ID.
-- Calls `compute_and_publish_result`.
 
-#### `desired_forces_callback`
-- Receives the desired forces and updates the `desired_forces_` member variable.
-- Logs the received forces for each sensor ID.
-- Calls `compute_and_publish_result`.
+1. **`measured_norm_forces_callback`**  
+   Triggered when new measured normalized forces are received.  
+   - Updates the internal state with the latest measured forces.
+   - Calls `compute_and_publish_error` if both measured and desired forces have been received.
 
-### Compute and Publish Results
-The `compute_and_publish_result` method performs the following steps:
-1. Checks if either `desired_forces_` or `measured_forces_` are empty and logs a warning if true.
-2. Initializes the `result_msg` to store the computed forces.
-3. Iterates over each motor ID in `motor_ids_`:
-   - Retrieves the corresponding sensor IDs using the motor-to-sensor mapping.
-   - For each sensor ID:
-     - Finds the indices of the sensor ID in the `measured_forces_` and `desired_forces_` messages.
-     - Computes the error between the desired and measured forces.
-     - Applies the proportional gain to compute the result force.
-     - Adds the result force and motor ID to `result_msg`.
-     - Logs the computed result force for the motor ID.
-4. Publishes the `result_msg` on the `/result_proportional_controller` topic.
+2. **`desired_norm_forces_callback`**  
+   Triggered when new desired normalized forces are received.  
+   - Updates the internal state with the latest desired forces.
+   - Calls `compute_and_publish_error` if both measured and desired forces have been received.
 
-## Example Usage
+3. **`set_gain_callback`**  
+   Triggered when a request is made to update the proportional gain.  
+   - Validates the new gain value (must be non-negative).
+   - Updates the internal gain state if valid and returns a success response.
 
-### Launch File
-Create a Python launch file as shown below:
+### Error Handling
 
-```python
-from typing import List
-from launch import LaunchDescription
-from launch_ros.actions import Node
+- If the `gain` parameter is negative, the node will log a fatal error and terminate.
+- If the `motor_ids` parameter is empty or not set, the node will also terminate with a fatal error.
+- During the computation, if a motor ID does not have an associated sensor mapping, an error is logged, and the computation continues for the remaining IDs.
 
-def generate_launch_description():
-    return LaunchDescription([
-        Node(
-            output='screen',
-            package='repo_controller',
-            executable='proportional_controller',
-            name='proportional_controller',
-            parameters=[
-                {"motor_ids": [31, 32, 33, 34, 35, 36, 37, 38]},
-                {"gain": 1.0}
-            ]
-        ),
-    ])
+## Usage Example
+
+To run the node, add it to your ROS 2 launch file or start it using the command line:
+
+```sh
+ros2 run <your_package_name> proportional_controller
 ```
 
-### Running the Node
-To run the node using ROS 2:
+## Node Flow
 
-1. Build your ROS 2 package:
-    ```bash
-    colcon build --packages-select repo_controller
-    ```
+1. The node starts and initializes parameters.
+2. Subscriptions to sensor data (`norm_forces`) and desired forces (`/cmd/desired_norm_forces`) are set up.
+3. On receiving data from either subscription, the corresponding callback is triggered:
+   - If both measured and desired forces have been received, the `compute_and_publish_error` method is called.
+   - This method calculates the error for each motor, applying the proportional gain, and publishes the results.
+4. If a client sends a service request to update the gain, the `set_gain_callback` method is invoked to handle the request
 
-2. Source the ROS 2 workspace:
-    ```bash
-    source install/setup.bash
-    ```
+## Depedencies
 
-3. Launch the node using the launch file:
-    ```bash
-    ros2 launch repo_controller controller.launch.py
-    ```
+- ROS 2 Foxy or later.
+- `uclv_seed_robotics_ros_interfaces`: Custom message and service definitions package.
 
 
-## Error Handling
+## Installation
 
-- If `gain` is negative, the node logs a fatal error and throws an `std::invalid_argument` exception.
-- If `motor_ids` is empty, the node logs a fatal error and throws a `std::runtime_error` exception.
-- If no mapping is found for a motor ID, the node logs a fatal error and continues processing other motor IDs.
-- If sensor IDs are not found in the received messages, the node logs a fatal error and continues processing other sensor IDs.
+To install this package, follow these steps:
+
+1. Clone the repository into your ROS 2 workspace:
+```sh
+git clone https://github.com/robertochello/repo_controller.git
+```
+2. Build the package using `colcon`:
+```sh
+colcon build --packages-select repo_controller
+```
+3. Source the workspace:
+```sh
+source install/setup.bash
+```
 
 ## Conclusion
+`proportional_controller_node` is a flexible and dynamic proportional control node that calculates motor errors based on normalized forces. Its design allows easy integration into larger robotics systems that require precise control over motor forces, with dynamic adjustment capabilities for the control gain.
 
-`proportional_controller_node` provides a proportional control mechanism for robotic hands, leveraging force-torque sensors to ensure desired forces are achieved. Proper configuration and parameter settings are essential for optimal performance.
