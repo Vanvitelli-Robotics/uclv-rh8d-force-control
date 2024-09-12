@@ -28,7 +28,10 @@ def generate_launch_description():
             executable='proportional_controller',
             name='proportional_controller',
             parameters=[
-                common_params,  # Use common parameters
+                common_params,# Use common parameters
+                {
+                    "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"] # Mapping motor ID - Sensor
+                }   # Additional parameters specific to this node
             ]
         ),
         # Node(
