@@ -83,7 +83,7 @@
 To run the node, add it to your ROS 2 launch file or start it using the command line:
 
 ```sh
-ros2 run <your_package_name> proportional_controller
+ros2 run repo_controller proportional_controller
 ```
 
 ## Node Flow
