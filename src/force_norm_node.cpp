@@ -38,7 +38,7 @@ private:
         for (size_t i = 0; i < msg->forces.size(); ++i)
         {
             // Calcolo della norma della forza 3D
-            norm_msg.norms[i] = std::sqrt(std::pow(msg->forces[i].x, 2) + std::pow(msg->forces[i].y, 2) + std::pow(msg->forces[i].z, 2)) / 1000.0;
+            norm_msg.norms[i] = std::sqrt(std::pow(msg->forces[i].x, 2) + std::pow(msg->forces[i].y, 2) + std::pow(msg->forces[i].z, 2))/(1000.0);
 
             RCLCPP_INFO(this->get_logger(), "Calculated norm for sensor ID: %d, Norm: %f", msg->ids[i], norm_msg.norms[i]);
         }

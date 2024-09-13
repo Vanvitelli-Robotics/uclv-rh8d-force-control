@@ -87,16 +87,16 @@ private:
 
 void initialize_motor_to_sensor_map()
     {
-   //     std::vector<std::string> motor_sensor_mappings = 
-   //         this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>());
+   //     std::vector<std::string> motor_sensor_mappings_ = 
+   //         this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings_", std::vector<std::string>());
 
-        if (motor_sensor_mappings.empty())
+        if (motor_sensor_mappings_.empty())
         {
-            RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_sensor_mappings' is empty or not set. Exiting...");
-            throw std::runtime_error("Parameter 'motor_sensor_mappings' is empty or not set");
+            RCLCPP_FATAL(this->get_logger(), "Parameter 'motor_sensor_mappings_' is empty or not set. Exiting...");
+            throw std::runtime_error("Parameter 'motor_sensor_mappings_' is empty or not set");
         }
 
-        for (const auto& mapping : motor_sensor_mappings)
+        for (const auto& mapping : motor_sensor_mappings_)
         {
             std::istringstream iss(mapping);
             int64_t motor_id;

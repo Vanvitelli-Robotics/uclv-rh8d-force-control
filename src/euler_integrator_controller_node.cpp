@@ -83,12 +83,21 @@ private:
                 // Apply Euler integration based on the error
                 motor_positions_.positions[i] += dt_ * proportional_result_->errors[index];
 
-                // Apply threshold limits
-                motor_positions_.positions[i] = std::clamp(
-                    motor_positions_.positions[i], 
-                    static_cast<double>(motor_thresholds_[0]), 
-                    static_cast<double>(motor_thresholds_[1])
-                );
+                // if (motor_positions_.positions[i] < motor_thresholds_[0])
+                // {
+                //     motor_positions_.positions[i] = motor_thresholds_[0];
+                // } else if (motor_positions_.positions[i] > motor_thresholds_[0])
+                // {
+                //     motor_positions_.positions[i] = motor_thresholds_[1];
+                // }
+                
+
+                // // Apply threshold limits
+                // motor_positions_.positions[i] = std::clam(
+                //     motor_positions_.positions[i], 
+                //     static_cast<double>(motor_thresholds_[0]), 
+                //     static_cast<double>(motor_thresholds_[1])
+                // );
             }
         }
 

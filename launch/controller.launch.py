@@ -5,7 +5,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Define common parameters
     common_params = {
-        "motor_ids": [36, 37]
+        "motor_ids": [35,36,37]
     }
 
     return LaunchDescription([
@@ -34,14 +34,14 @@ def generate_launch_description():
                 }   # Additional parameters specific to this node
             ]
         ),
-        # Node(
-        #     output='screen',
-        #     package='repo_controller',
-        #     executable='force_norm',
-        #     name='force_norm',
-        #     parameters=[
-        #         # {'sensor_state_topic': 'your_new_sensor_state_topic'},
-        #         # {'norm_forces_topic': 'your_new_norm_forces_topic'},
-        #     ]
-        # ),
+        Node(
+            output='screen',
+            package='repo_controller',
+            executable='force_norm',
+            name='force_norm',
+            parameters=[
+                # {'sensor_state_topic': 'your_new_sensor_state_topic'},
+                # {'norm_forces_topic': 'your_new_norm_forces_topic'},
+            ]
+        ),
     ])
