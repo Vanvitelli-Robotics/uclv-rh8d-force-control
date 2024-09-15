@@ -5,7 +5,10 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Define common parameters
     common_params = {
-        "motor_ids": [35, 36, 37]  # Motor IDs used by both controllers
+        "motor_ids": [35, 36, 37],  # Motor IDs used by both controllers
+        "proportional_result_topic": "/result_proportional_controller",  # Topic for proportional result
+        "desired_position_topic": "/desired_position",  # Topic for desired positions
+        "start_stop_service_name": "startstop"  # Service name to start/stop the integration
     }
 
     return LaunchDescription([
@@ -17,7 +20,7 @@ def generate_launch_description():
             parameters=[
                 common_params,  # Use common parameters
                 {
-                    "dt": 0.001,
+                    "dt": 0.001,  # Time step for integration
                     "motor_thresholds": [100, 3995]  # Thresholds for motors
                 }   # Additional parameters specific to this node
             ]
@@ -34,7 +37,6 @@ def generate_launch_description():
                     "gain": 1.0,  # Proportional gain for the controller
                     "measured_norm_topic": "norm_forces",  # Topic for measured forces
                     "desired_norm_topic": "/cmd/desired_norm_forces",  # Topic for desired forces
-                    "error_pub_topic": "/result_proportional_controller",  # Topic for publishing errors
                     "set_gain_service_name": "set_gain"  # Service name to set the gain
                 }   # Additional parameters specific to this node
             ]
