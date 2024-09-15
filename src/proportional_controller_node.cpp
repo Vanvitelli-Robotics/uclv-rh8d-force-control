@@ -17,7 +17,7 @@ public:
 
     std::string measured_norm_topic_;  // Name of the topic for measured normalized forces
     std::string desired_norm_topic_;   // Name of the topic for desired normalized forces
-    std::string error_pub_topic_;      // Name of the topic for publishing errors
+    std::string proportional_result_topic_;      // Name of the topic for publishing errors
     std::string set_gain_service_name_; // Name of the service to set gain
 
     uclv_seed_robotics_ros_interfaces::msg::SensorsNorm desired_norm_forces_;  // Message for desired normalized forces
@@ -47,7 +47,7 @@ public:
           motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
           measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
-          error_pub_topic_(this->declare_parameter<std::string>("error_pub_topic", "/result_proportional_controller")),
+          proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic_", "/result_proportional_controller")),
           set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain"))
     {
         // Check if the gain is non-negative; terminate if not
@@ -77,7 +77,7 @@ public:
 
         // Create publisher for motor errors
         error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
-            error_pub_topic_, 10);
+            proportional_result_topic_, 10);
 
         // Create service for setting the gain
         set_gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
@@ -88,8 +88,6 @@ private:
 
 void initialize_motor_to_sensor_map()
     {
-   //     std::vector<std::string> motor_sensor_mappings_ = 
-   //         this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings_", std::vector<std::string>());
 
         if (motor_sensor_mappings_.empty())
         {
