@@ -11,6 +11,10 @@ def generate_launch_description():
         "start_stop_service_name": "startstop"  # Service name to start/stop the integration
     }
 
+    common_params_2 = {
+        "measured_norm_topic": "norm_forces",  # Topic for measured forces
+    }
+
     return LaunchDescription([
         Node(
             output='screen',
@@ -32,10 +36,10 @@ def generate_launch_description():
             name='proportional_controller',
             parameters=[
                 common_params,  # Use common parameters
+                common_params_2, # Use common parameters for proportional and force_norm
                 {
                     "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Mapping motor ID to sensors
                     "gain": 1.0,  # Proportional gain for the controller
-                    "measured_norm_topic": "norm_forces",  # Topic for measured forces
                     "desired_norm_topic": "/cmd/desired_norm_forces",  # Topic for desired forces
                     "set_gain_service_name": "set_gain"  # Service name to set the gain
                 }   # Additional parameters specific to this node
@@ -47,8 +51,11 @@ def generate_launch_description():
             executable='force_norm',
             name='force_norm',
             parameters=[
-                {'sensor_state_topic': "sensor_state"},
-                {'norm_forces_topic': "norm_forces"}
+                common_params_2,
+                {
+                    "sensor_state_topic": "sensor_state",
+                    "norm_forces_topic": "norm_forces"
+                }
             ]
         ),
     ])
