@@ -1,7 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/wait_for_message.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
-#include "uclv_seed_robotics_ros_interfaces/msg/motor_error.hpp"  // Update to MotorError
+#include "uclv_seed_robotics_ros_interfaces/msg/motor_error.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include <vector>
 #include <stdexcept>
