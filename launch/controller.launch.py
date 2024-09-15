@@ -6,8 +6,8 @@ def generate_launch_description():
     # Define common parameters
     common_params = {
         "motor_ids": [35, 36, 37],  # Motor IDs used by both controllers
-        "proportional_result_topic": "/result_proportional_controller",  # Topic for proportional result
-        "desired_position_topic": "/desired_position",  # Topic for desired positions
+        "proportional_result_topic": "result_proportional_controller",  # Topic for proportional result
+        "desired_position_topic": "desired_position",  # Topic for desired positions
         "start_stop_service_name": "startstop"  # Service name to start/stop the integration
     }
 
