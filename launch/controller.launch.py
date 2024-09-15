@@ -7,7 +7,6 @@ def generate_launch_description():
     common_params = {
         "motor_ids": [35, 36, 37],  # Motor IDs used by both controllers
         "proportional_result_topic": "result_proportional_controller",  # Topic for proportional result
-        "start_stop_service_name": "startstop"  # Service name to start/stop the integration
     }
 
     common_params_2 = {
@@ -25,7 +24,9 @@ def generate_launch_description():
                 {
                     "dt": 0.001,  # Time step for integration
                     "motor_thresholds": [100, 3995],  # Thresholds for motors
-                    "desired_position_topic": "desired_position"  # Topic for desired positions
+                    "desired_position_topic": "desired_position",  # Topic for desired positions
+                    "start_stop_service_name": "startstop"  # Service name to start/stop the integration
+
                 }   # Additional parameters specific to this node
             ]
         ),
