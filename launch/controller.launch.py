@@ -26,7 +26,6 @@ def generate_launch_description():
                     "dt": 0.001,  # Time step for integration
                     "motor_thresholds": [100, 3995],  # Thresholds for motors
                     "desired_position_topic": "desired_position"  # Topic for desired positions
-
                 }   # Additional parameters specific to this node
             ]
         ),
