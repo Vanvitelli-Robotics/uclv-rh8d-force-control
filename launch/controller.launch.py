@@ -47,8 +47,8 @@ def generate_launch_description():
             executable='force_norm',
             name='force_norm',
             parameters=[
-                # {'sensor_state_topic': 'your_new_sensor_state_topic'},  # Add parameters if needed
-                # {'norm_forces_topic': 'your_new_norm_forces_topic'},  # Add parameters if needed
+                {'sensor_state_topic': "sensor_state"},
+                {'norm_forces_topic': "norm_forces"}
             ]
         ),
     ])
