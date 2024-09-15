@@ -23,15 +23,21 @@ public:
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;  // Publisher for desired motor positions
     rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
+    // Topics and services as parameters
+    std::string proportional_result_topic_;
+    std::string desired_position_topic_;
+    std::string start_stop_service_name_;
+
     EulerIntegrator()
         : Node("euler_integrator"),
         dt_(this->declare_parameter<double>("dt", 0.001)),  // Get the integration time step (dt) from parameters
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
-          motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
-          proportional_result_received_(false)  // Initialize flag as false
-        {
-          
-    
+        motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
+        motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
+        proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic", "/result_proportional_controller")),  // Get proportional result topic from parameters
+        desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "/desired_position")),  // Get desired position topic from parameters
+        start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "startstop")),  // Get start/stop service name from parameters
+        proportional_result_received_(false)  // Initialize flag as false
+    {
         // Ensure motor IDs are provided
         if (motor_ids_.empty())
         {
@@ -48,15 +54,15 @@ public:
 
         // Create a service to start/stop the integration process
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
-            "startstop", std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
+            start_stop_service_name_, std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         // Subscribe to proportional controller data
         proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
-            "/result_proportional_controller", 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
+            proportional_result_topic_, 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
         // Create a publisher for desired motor positions
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
-            "/desired_position", 10);
+            desired_position_topic_, 10);
 
         // Create a timer that calls the integrate method at intervals defined by dt_
         timer_ = this->create_wall_timer(
@@ -69,36 +75,35 @@ public:
 private:
     // Euler integration function with motor thresholds
     void integrate()
-{
-    if (proportional_result_received_)
     {
-        for (size_t i = 0; i < motor_positions_.ids.size(); i++)
+        if (proportional_result_received_)
         {
-            // Find the corresponding motor ID in the proportional result
-            auto it = std::find(proportional_result_->motor_ids.begin(), proportional_result_->motor_ids.end(), motor_positions_.ids[i]);
-            if (it != proportional_result_->motor_ids.end())
+            for (size_t i = 0; i < motor_positions_.ids.size(); i++)
             {
-                size_t index = std::distance(proportional_result_->motor_ids.begin(), it);
-                // Apply Euler integration based on the error
-                motor_positions_.positions[i] += dt_ * proportional_result_->errors[index];
+                // Find the corresponding motor ID in the proportional result
+                auto it = std::find(proportional_result_->motor_ids.begin(), proportional_result_->motor_ids.end(), motor_positions_.ids[i]);
+                if (it != proportional_result_->motor_ids.end())
+                {
+                    size_t index = std::distance(proportional_result_->motor_ids.begin(), it);
+                    // Apply Euler integration based on the error
+                    motor_positions_.positions[i] += dt_ * proportional_result_->errors[index];
 
-                // Thresholds
-                motor_positions_.positions[i] = std::max(
-                    static_cast<double>(motor_thresholds_[0]), 
-                    std::min(motor_positions_.positions[i], static_cast<double>(motor_thresholds_[1]))
-                );
+                    // Thresholds
+                    motor_positions_.positions[i] = std::max(
+                        static_cast<double>(motor_thresholds_[0]), 
+                        std::min(motor_positions_.positions[i], static_cast<double>(motor_thresholds_[1]))
+                    );
+                }
             }
+
+            // Publish the updated motor positions
+            desired_position_pub_->publish(motor_positions_);
         }
-
-        // Publish the updated motor positions
-        desired_position_pub_->publish(motor_positions_);
+        else
+        {
+            RCLCPP_WARN(this->get_logger(), "Proportional result not received yet.");
+        }
     }
-    else
-    {
-        RCLCPP_WARN(this->get_logger(), "Proportional result not received yet.");
-    }
-}
-
 
     // Callback function for receiving proportional controller results
     void proportional_result_callback(const uclv_seed_robotics_ros_interfaces::msg::MotorError::SharedPtr msg)
