@@ -15,6 +15,11 @@ public:
     std::vector<int64_t> motor_ids_; // List of motor IDs managed by the controller
     std::vector<std::string> motor_sensor_mappings_; // Mapping motor ID - Sensors
 
+    std::string measured_norm_topic_;  // Name of the topic for measured normalized forces
+    std::string desired_norm_topic_;   // Name of the topic for desired normalized forces
+    std::string error_pub_topic_;      // Name of the topic for publishing errors
+    std::string set_gain_service_name_; // Name of the service to set gain
+
     uclv_seed_robotics_ros_interfaces::msg::SensorsNorm desired_norm_forces_;  // Message for desired normalized forces
     uclv_seed_robotics_ros_interfaces::msg::SensorsNorm measured_norm_forces_; // Message for measured normalized forces
 
@@ -39,7 +44,11 @@ public:
         : Node("proportional_controller"),  // Initialize the node with the name "proportional_controller"
           gain_(this->declare_parameter<double>("gain", 1.0)), // Initialize gain from the ROS parameter (default: 1.0)
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Initialize motor IDs from the ROS parameter
-          motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>()))
+          motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
+          measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
+          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
+          error_pub_topic_(this->declare_parameter<std::string>("error_pub_topic", "/result_proportional_controller")),
+          set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain"))
     {
         // Check if the gain is non-negative; terminate if not
         if (gain_ < 0.0)
@@ -60,30 +69,22 @@ public:
 
         // Create subscription to measured normalized forces
         measured_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
-            "norm_forces", 10, std::bind(&ProportionalController::measured_norm_forces_callback, this, std::placeholders::_1));
+            measured_norm_topic_, 10, std::bind(&ProportionalController::measured_norm_forces_callback, this, std::placeholders::_1));
 
         // Create subscription to desired normalized forces
         desired_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
-            "/cmd/desired_norm_forces", 10, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
+            desired_norm_topic_, 10, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
 
         // Create publisher for motor errors
         error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
-            "/result_proportional_controller", 10);
+            error_pub_topic_, 10);
 
         // Create service for setting the gain
         set_gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
-            "set_gain", std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
+            set_gain_service_name_, std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:
-    // Initialize the mapping between motor IDs and their associated sensor IDs
-//    void initialize_motor_to_sensor_map()
-//    {
-//        motor_to_sensor_map_[35] = {0};  // Motor ID 35 is associated with Sensor ID 0
-//        motor_to_sensor_map_[36] = {1};  // Motor ID 36 is associated with Sensor ID 1
-//        motor_to_sensor_map_[37] = {2};  // Motor ID 37 is associated with Sensor ID 2
-//        motor_to_sensor_map_[38] = {3, 4}; // Motor ID 38 is associated with Sensor IDs 3 and 4
-//    }
 
 void initialize_motor_to_sensor_map()
     {
