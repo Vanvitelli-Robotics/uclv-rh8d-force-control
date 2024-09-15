@@ -47,7 +47,7 @@ public:
           motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
           measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
-          proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic_", "/result_proportional_controller")),
+          proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic_", "result_proportional_controller")),
           set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain"))
     {
         // Check if the gain is non-negative; terminate if not
