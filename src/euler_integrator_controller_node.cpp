@@ -5,7 +5,6 @@
 #include "std_srvs/srv/set_bool.hpp"
 #include <vector>
 #include <stdexcept>
-#include <algorithm>  // For std::clamp
 
 class EulerIntegrator : public rclcpp::Node
 {
