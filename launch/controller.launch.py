@@ -9,7 +9,12 @@ def generate_launch_description():
         "proportional_result_topic": "result_proportional_controller",  # Topic for proportional result
     }
 
-    # Parameters specific to each node
+    # Parameters for norm forces topic (shared by proportional_controller and force_norm)
+    norm_forces_params = {
+        "measured_norm_topic": "norm_forces"  # Topic for measured norm forces
+    }
+
+    # Parameters specific to the euler integrator node
     euler_integrator_params = {
         "dt": 0.001,  # Time step for integration
         "motor_thresholds": [100, 3995],  # Thresholds for motors
@@ -17,6 +22,7 @@ def generate_launch_description():
         "start_stop_service_name": "startstop"  # Service name to start/stop the integration
     }
 
+    # Parameters specific to the proportional controller node
     proportional_controller_params = {
         "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Mapping motor ID to sensors
         "gain": 1.0,  # Proportional gain for the controller
@@ -24,9 +30,9 @@ def generate_launch_description():
         "set_gain_service_name": "set_gain"  # Service name to set the gain
     }
 
+    # Parameters specific to the force norm node
     force_norm_params = {
-        "sensor_state_topic": "sensor_state",
-        "norm_forces_topic": "norm_forces"
+        "sensor_state_topic": "sensor_state"  # Topic for sensor state
     }
 
     return LaunchDescription([
@@ -47,6 +53,7 @@ def generate_launch_description():
             name='proportional_controller',
             parameters=[
                 common_params,  # Common parameters
+                norm_forces_params,  # Shared parameters for norm forces
                 proportional_controller_params  # Node-specific parameters
             ]
         ),
@@ -56,6 +63,7 @@ def generate_launch_description():
             executable='force_norm',
             name='force_norm',
             parameters=[
+                norm_forces_params,  # Shared parameters for norm forces
                 force_norm_params  # Node-specific parameters
             ]
         ),
