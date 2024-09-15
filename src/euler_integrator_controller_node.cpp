@@ -34,7 +34,7 @@ public:
         motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
         motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
         proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic", "result_proportional_controller")),  // Get proportional result topic from parameters
-        desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "/desired_position")),  // Get desired position topic from parameters
+        desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "desired_position")),  // Get desired position topic from parameters
         start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "startstop")),  // Get start/stop service name from parameters
         proportional_result_received_(false)  // Initialize flag as false
     {
