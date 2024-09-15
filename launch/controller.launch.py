@@ -5,7 +5,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Define common parameters
     common_params = {
-        "motor_ids": [35,36,37]
+        "motor_ids": [35, 36, 37]  # Motor IDs used by both controllers
     }
 
     return LaunchDescription([
@@ -18,7 +18,7 @@ def generate_launch_description():
                 common_params,  # Use common parameters
                 {
                     "dt": 0.001,
-                    "motor_thresholds": [100, 3995]
+                    "motor_thresholds": [100, 3995]  # Thresholds for motors
                 }   # Additional parameters specific to this node
             ]
         ),
@@ -28,9 +28,14 @@ def generate_launch_description():
             executable='proportional_controller',
             name='proportional_controller',
             parameters=[
-                common_params,# Use common parameters
+                common_params,  # Use common parameters
                 {
-                    "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"] # Mapping motor ID - Sensor
+                    "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Mapping motor ID to sensors
+                    "gain": 1.0,  # Proportional gain for the controller
+                    "measured_norm_topic": "norm_forces",  # Topic for measured forces
+                    "desired_norm_topic": "/cmd/desired_norm_forces",  # Topic for desired forces
+                    "error_pub_topic": "/result_proportional_controller",  # Topic for publishing errors
+                    "set_gain_service_name": "set_gain"  # Service name to set the gain
                 }   # Additional parameters specific to this node
             ]
         ),
@@ -40,8 +45,8 @@ def generate_launch_description():
             executable='force_norm',
             name='force_norm',
             parameters=[
-                # {'sensor_state_topic': 'your_new_sensor_state_topic'},
-                # {'norm_forces_topic': 'your_new_norm_forces_topic'},
+                # {'sensor_state_topic': 'your_new_sensor_state_topic'},  # Add parameters if needed
+                # {'norm_forces_topic': 'your_new_norm_forces_topic'},  # Add parameters if needed
             ]
         ),
     ])
