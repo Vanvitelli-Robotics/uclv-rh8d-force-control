@@ -24,7 +24,7 @@ def generate_launch_description():
 
     # Parameters specific to the proportional controller node
     proportional_controller_params = {
-        "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Mapping motor ID to sensors
+        "motor_sensor_mappings": ["35:0:1.0", "36:1:1.0", "37:2:1.0", "38:3:0.8,4:0.2"] # Mapping Motor ID - Sensor ID with weight -> motor_id:sensor_id:weight
         "gain": 1.0,  # Proportional gain for the controller
         "desired_norm_topic": "/cmd/desired_norm_forces",  # Topic for desired forces
         "set_gain_service_name": "set_gain"  # Service name to set the gain
