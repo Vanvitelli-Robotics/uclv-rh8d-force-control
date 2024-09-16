@@ -1,6 +1,5 @@
 #include "rclcpp/rclcpp.hpp"  // Include the main header for ROS 2 C++ client library
-#include "uclv_seed_robotics_ros_interfaces/msg/sensors_norm.hpp"  // Include custom message type for sensor data
-#include "uclv_seed_robotics_ros_interfaces/msg/motor_error.hpp"  // Include custom message type for motor error data
+#include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"  // Include custom service type for setting the gain value
 #include <stdexcept>  // Include standard library for handling exceptions
 #include <unordered_map>  // Include standard library for using hash maps
@@ -20,8 +19,8 @@ public:
     std::string proportional_result_topic_;      // Name of the topic for publishing errors
     std::string set_gain_service_name_; // Name of the service to set gain
 
-    uclv_seed_robotics_ros_interfaces::msg::SensorsNorm desired_norm_forces_;  // Message for desired normalized forces
-    uclv_seed_robotics_ros_interfaces::msg::SensorsNorm measured_norm_forces_; // Message for measured normalized forces
+    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
+    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped measured_norm_forces_; // Message for measured normalized forces
 
     bool desired_norm_forces_received_ = false;  // Flag indicating if desired forces data has been received
     bool measured_norm_forces_received_ = false; // Flag indicating if measured forces data has been received
@@ -30,11 +29,11 @@ public:
     std::unordered_map<int64_t, std::vector<int64_t>> motor_to_sensor_map_;
 
     // ROS 2 subscriptions to receive sensor data
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>::SharedPtr measured_norm_forces_sub_;
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>::SharedPtr desired_norm_forces_sub_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_norm_forces_sub_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_forces_sub_;
 
     // ROS 2 publisher to publish motor errors
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>::SharedPtr error_pub_;
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr error_pub_;
 
     // ROS 2 service to handle requests for setting the gain value
     rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr set_gain_service_;
@@ -68,15 +67,15 @@ public:
         initialize_motor_to_sensor_map();
 
         // Create subscription to measured normalized forces
-        measured_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
+        measured_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             measured_norm_topic_, 10, std::bind(&ProportionalController::measured_norm_forces_callback, this, std::placeholders::_1));
 
         // Create subscription to desired normalized forces
-        desired_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::SensorsNorm>(
+        desired_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             desired_norm_topic_, 10, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
 
         // Create publisher for motor errors
-        error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorError>(
+        error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             proportional_result_topic_, 10);
 
         // Create service for setting the gain
@@ -141,7 +140,7 @@ void initialize_motor_to_sensor_map()
     }
 
     // Callback function for receiving measured normalized forces
-    void measured_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::SensorsNorm::SharedPtr msg)
+    void measured_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
     {
         measured_norm_forces_ = *msg;  // Store the received message
         measured_norm_forces_received_ = true;  // Set the flag indicating that data has been received
@@ -149,7 +148,7 @@ void initialize_motor_to_sensor_map()
     }
 
     // Callback function for receiving desired normalized forces
-    void desired_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::SensorsNorm::SharedPtr msg)
+    void desired_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
     {
         desired_norm_forces_ = *msg;  // Store the received message
         desired_norm_forces_received_ = true;  // Set the flag indicating that data has been received
@@ -186,7 +185,7 @@ void initialize_motor_to_sensor_map()
         }
 
         // Initialize the motor error message
-        uclv_seed_robotics_ros_interfaces::msg::MotorError error_msg;
+        uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped error_msg;
         error_msg.header.stamp = this->now();  // Set the timestamp for the message
 
         // Iterate over each motor ID to compute the error
@@ -226,18 +225,25 @@ void initialize_motor_to_sensor_map()
                 size_t desired_id = std::distance(desired_norm_forces_.ids.begin(), desired_force_iter);
 
                 // Retrieve the measured and desired normalized forces
-                double measured_norm = measured_norm_forces_.norms[measured_id];
-                double desired_norm = desired_norm_forces_.norms[desired_id];
+                double measured_norm = measured_norm_forces_.data[measured_id];
+                double desired_norm = desired_norm_forces_.data[desired_id];
 
                 // Compute the error for the sensor
                 double error = desired_norm - measured_norm;
 
                 RCLCPP_INFO(this->get_logger(), "Error for Sensor ID: %ld - Error: %f", sensor_id, error);
-
+                
+                // TODO: devi fare la media tra i valore degli ultimi due sensori 
+                //      perché stanno su un solo motore.
+                //      Dopo che hai fatto la media, fuori dal for dei sensori, metti
+                //      i push_back.
                 // Add the motor ID and the computed error to the error message
-                error_msg.motor_ids.push_back(motor_id);
-                error_msg.errors.push_back(gain_ * error);  // Apply the proportional gain to the error
+                error_msg.ids.push_back(motor_id);
+                error_msg.data.push_back(gain_ * error);  // Apply the proportional gain to the error
+                
+                
             }
+            
         }
 
         // Publish the computed motor errors
