@@ -18,7 +18,7 @@ public:
 
     std::string measured_norm_topic_;       // Name of the topic for measured normalized forces
     std::string desired_norm_topic_;        // Name of the topic for desired normalized forces
-    std::string proportional_result_topic_; // Name of the topic for publishing errors
+    std::string measured_velocity_topic_; // Name of the topic for publishing errors
     std::string set_gain_service_name_;     // Name of the service to set gain
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
@@ -51,7 +51,7 @@ public:
           sensor_weight_mappings_(this->declare_parameter<std::vector<std::string>>("sensor_weight_mappings", std::vector<std::string>())),
           measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
-          proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic", "result_proportional_controller")),
+          measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),
           set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain"))
     {
         // Check if the gain is non-negative; terminate if not
@@ -82,7 +82,7 @@ public:
 
         // Create publisher for motor errors
         error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            proportional_result_topic_, 10);
+            measured_velocity_topic_, 10);
 
         // Create service for setting the gain
         set_gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
