@@ -1,13 +1,13 @@
 
-#include "rclcpp/rclcpp.hpp" // Include the main header for ROS 2 C++ client library
+#include "rclcpp/rclcpp.hpp" 
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
-#include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp" // Include custom service type for setting the gain value
-#include <stdexcept>                                          // Include standard library for handling exceptions
-#include <unordered_map>                                      // Include standard library for using hash maps
-#include <vector>                                             // Include standard library for using vectors
-#include <algorithm>                                          // Include standard library for common algorithms like std::find
+#include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"
+#include <stdexcept>
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
 
-// Definition of the ProportionalController class, which inherits from rclcpp::Node
+
 class ProportionalController : public rclcpp::Node
 {
 public:
@@ -44,9 +44,9 @@ public:
 
     // Constructor for initializing the node
     ProportionalController()
-        : Node("proportional_controller"),                                                                // Initialize the node with the name "proportional_controller"
-          gain_(this->declare_parameter<double>("gain", 1.0)),                                            // Initialize gain from the ROS parameter (default: 1.0)
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())), // Initialize motor IDs from the ROS parameter
+        : Node("proportional_controller"),
+          gain_(this->declare_parameter<double>("gain", 1.0)),
+          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
           motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
           sensor_weight_mappings_(this->declare_parameter<std::vector<std::string>>("sensor_weight_mappings", std::vector<std::string>())),
           measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
@@ -68,7 +68,7 @@ public:
             throw std::runtime_error("Parameter 'motor_ids' is empty or not set");
         }
 
-        // Initialize the mapping between motors and their associated sensors
+        // Initialize the mapping
         initialize_motor_to_sensor_map();
         initialize_sensor_to_weight_map();
 
@@ -286,7 +286,7 @@ void initialize_sensor_to_weight_map()
 
 int main(int argc, char *argv[])
 {
-    rclcpp::init(argc, argv); // Initialize the ROS 2 client library
+    rclcpp::init(argc, argv);
     try
     {
         auto proportional_controller_node = std::make_shared<ProportionalController>();
