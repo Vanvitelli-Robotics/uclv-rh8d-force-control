@@ -37,7 +37,7 @@ public:
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_forces_sub_;
 
     // ROS 2 publisher to publish motor errors
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr error_pub_;
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_velocity_pub_;
 
     // ROS 2 service to handle requests for setting the gain value
     rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr set_gain_service_;
@@ -81,7 +81,7 @@ public:
             desired_norm_topic_, 10, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
 
         // Create publisher for motor errors
-        error_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
+        measured_velocity_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             measured_velocity_topic_, 10);
 
         // Create service for setting the gain
@@ -275,7 +275,7 @@ void initialize_sensor_to_weight_map()
     }
 
     // Publish the computed motor errors
-    error_pub_->publish(error_msg);
+    measured_velocity_pub_->publish(error_msg);
 
     // Reset the flags for receiving new data
     desired_norm_forces_received_ = false;
