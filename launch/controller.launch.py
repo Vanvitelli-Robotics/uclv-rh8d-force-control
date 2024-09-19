@@ -6,7 +6,7 @@ def generate_launch_description():
     # Common parameters for all nodes
     common_params = {
         "motor_ids": [35, 36, 37, 38],  # Motor IDs used by both controllers
-        "proportional_result_topic": "result_proportional_controller",  # Topic for proportional result
+        "measured_velocity_topic": "measured_velocity",  # Topic for proportional result
     }
 
     # Parameters for norm forces topic (shared by proportional_controller and force_norm)
