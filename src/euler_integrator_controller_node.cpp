@@ -13,14 +13,14 @@ public:
     double dt_;  // Time step for integration
     std::vector<int64_t> motor_ids_;  // Motor IDs to be controlled
     std::vector<int64_t> motor_thresholds_;  // Thresholds for motor positions
-    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr proportional_result_;  // Latest proportional controller result
-    bool proportional_result_received_;  // Flag to indicate if a proportional result has been received
+    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr measured_velocity_;  // Latest proportional controller result
+    bool measured_velocity_received_;  // Flag to indicate if a proportional result has been received
 
     uclv_seed_robotics_ros_interfaces::msg::MotorPositions motor_positions_;  // Current motor positions
 
     // ROS interfaces
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;  // Service to start/stop the integration
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr proportional_result_sub_;  // Subscription to proportional controller result
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_velocity_sub_;  // Subscription to proportional controller result
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr desired_position_pub_;  // Publisher for desired motor positions
     rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
@@ -37,7 +37,7 @@ public:
         measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),  // Get proportional result topic from parameters
         desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "desired_position")),  // Get desired position topic from parameters
         start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "startstop")),  // Get start/stop service name from parameters
-        proportional_result_received_(false)  // Initialize flag as false
+        measured_velocity_received_(false)  // Initialize flag as false
     {
         // Ensure motor IDs are provided
         if (motor_ids_.empty())
@@ -58,8 +58,8 @@ public:
             start_stop_service_name_, std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         // Subscribe to proportional controller data
-        proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            measured_velocity_topic_, 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
+        measured_velocity_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
+            measured_velocity_topic_, 1, std::bind(&EulerIntegrator::measured_velocity_callback, this, std::placeholders::_1));
 
         // Create a publisher for desired motor positions
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
@@ -77,17 +77,17 @@ private:
     // Euler integration function with motor thresholds
     void integrate()
     {
-        if (proportional_result_received_)
+        if (measured_velocity_received_)
         {
             for (size_t i = 0; i < motor_positions_.ids.size(); i++)
             {
                 // Find the corresponding motor ID in the proportional result
-                auto it = std::find(proportional_result_->ids.begin(), proportional_result_->ids.end(), motor_positions_.ids[i]);
-                if (it != proportional_result_->ids.end())
+                auto it = std::find(measured_velocity_->ids.begin(), measured_velocity_->ids.end(), motor_positions_.ids[i]);
+                if (it != measured_velocity_->ids.end())
                 {
-                    size_t index = std::distance(proportional_result_->ids.begin(), it);
+                    size_t index = std::distance(measured_velocity_->ids.begin(), it);
                     // Apply Euler integration based on the error
-                    motor_positions_.positions[i] += dt_ * proportional_result_->data[index];
+                    motor_positions_.positions[i] += dt_ * measured_velocity_->data[index];
 
                     // Anti-WindUp
                     if (motor_positions_.positions[i] > motor_thresholds_[1])
@@ -110,10 +110,10 @@ private:
     }
 
     // Callback function for receiving proportional controller results
-    void proportional_result_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
+    void measured_velocity_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
     {
-        proportional_result_ = msg;  // Store the latest error data
-        proportional_result_received_ = true;  // Set the flag to indicate data has been received
+        measured_velocity_ = msg;  // Store the latest error data
+        measured_velocity_received_ = true;  // Set the flag to indicate data has been received
     }
 
     // Callback function for the start/stop service
