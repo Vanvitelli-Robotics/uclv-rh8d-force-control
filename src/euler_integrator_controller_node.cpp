@@ -25,7 +25,7 @@ public:
     rclcpp::TimerBase::SharedPtr timer_;  // Timer for periodic integration updates
 
     // Topics and services as parameters
-    std::string proportional_result_topic_;
+    std::string measured_velocity_topic_;
     std::string desired_position_topic_;
     std::string start_stop_service_name_;
 
@@ -34,7 +34,7 @@ public:
         dt_(this->declare_parameter<double>("dt", 0.001)),  // Get the integration time step (dt) from parameters
         motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
         motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
-        proportional_result_topic_(this->declare_parameter<std::string>("proportional_result_topic", "result_proportional_controller")),  // Get proportional result topic from parameters
+        measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),  // Get proportional result topic from parameters
         desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "desired_position")),  // Get desired position topic from parameters
         start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "startstop")),  // Get start/stop service name from parameters
         proportional_result_received_(false)  // Initialize flag as false
@@ -59,7 +59,7 @@ public:
 
         // Subscribe to proportional controller data
         proportional_result_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            proportional_result_topic_, 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
+            measured_velocity_topic_, 1, std::bind(&EulerIntegrator::proportional_result_callback, this, std::placeholders::_1));
 
         // Create a publisher for desired motor positions
         desired_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
