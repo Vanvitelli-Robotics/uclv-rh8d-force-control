@@ -24,6 +24,8 @@ ament_target_dependencies(
   proportional_controller
   "rclcpp"
   "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
+
 )
 
 add_executable(force_norm src/force_norm_node.cpp)
@@ -33,10 +35,20 @@ ament_target_dependencies(
   "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
 )
 
+add_executable(close src/close_node.cpp)
+ament_target_dependencies(
+  close
+  "rclcpp"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
+
+)
+
 install(TARGETS 
       euler_integrator_controller
       proportional_controller
       force_norm
+      close
       DESTINATION 
         lib/${PROJECT_NAME})
 

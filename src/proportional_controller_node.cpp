@@ -2,6 +2,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"
+#include "std_srvs/srv/set_bool.hpp"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -19,6 +20,9 @@ public:
     std::string desired_norm_topic_;      // Name of the topic for desired normalized forces
     std::string measured_velocity_topic_; // Name of the topic for publishing errors
     std::string set_gain_service_name_;   // Name of the service to set gain
+    ///////////////////////////
+        std::string start_stop_service_name_;
+
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped measured_norm_forces_; // Message for measured normalized forces
@@ -41,6 +45,16 @@ public:
     // ROS 2 service to handle requests for setting the gain value
     rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr set_gain_service_;
 
+
+    //////////////////////////////////////
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
+
+    
+
+
+    
+
+
     // Constructor for initializing the node
     ProportionalController()
         : Node("proportional_controller"),
@@ -51,7 +65,11 @@ public:
           measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
           measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),
-          set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain"))
+          set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain")),
+          ////////////////
+                  start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "startstop"))  // Get start/stop service name from parameters
+
+    
     {
         // Check if the gain is non-negative; terminate if not
         if (gain_ < 0.0)
@@ -86,9 +104,19 @@ public:
         // Create service for setting the gain
         set_gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
             set_gain_service_name_, std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
+        
+        ////////////////////////////////////
+        start_stop_service_ = create_service<std_srvs::srv::SetBool>(
+            start_stop_service_name_, std::bind(&ProportionalController::service_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:
+
+    ////////////////
+    void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                          std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+    }
+
     template <typename KeyType, typename ValueType>
     void initialize_map_from_mappings(
         const std::vector<std::string> &mappings,
@@ -274,6 +302,7 @@ private:
                 double average_error = total_weighted_error / total_weights;
                 velocity_msg.ids.push_back(motor_id);
                 velocity_msg.data.push_back(gain_ * average_error); // Apply the proportional gain to the average error
+                // velocity_msg.data.push_back(200);
                 RCLCPP_INFO(this->get_logger(), "Published error for motor ID: %ld - Error: %f", motor_id, average_error);
             }
             else
