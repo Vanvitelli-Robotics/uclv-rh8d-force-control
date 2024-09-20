@@ -1,12 +1,11 @@
 
-#include "rclcpp/rclcpp.hpp" 
+#include "rclcpp/rclcpp.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
-
 
 class ProportionalController : public rclcpp::Node
 {
@@ -16,10 +15,10 @@ public:
     std::vector<std::string> motor_sensor_mappings_;  // Mapping motor ID - sensors ID
     std::vector<std::string> sensor_weight_mappings_; // Mapping sensor ID - weight
 
-    std::string measured_norm_topic_;       // Name of the topic for measured normalized forces
-    std::string desired_norm_topic_;        // Name of the topic for desired normalized forces
+    std::string measured_norm_topic_;     // Name of the topic for measured normalized forces
+    std::string desired_norm_topic_;      // Name of the topic for desired normalized forces
     std::string measured_velocity_topic_; // Name of the topic for publishing errors
-    std::string set_gain_service_name_;     // Name of the service to set gain
+    std::string set_gain_service_name_;   // Name of the service to set gain
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped measured_norm_forces_; // Message for measured normalized forces
@@ -90,48 +89,48 @@ public:
     }
 
 private:
-   template <typename KeyType, typename ValueType>
-void initialize_map_from_mappings(
-    const std::vector<std::string> &mappings,
-    std::unordered_map<KeyType, std::vector<ValueType>> &map,
-    const std::string &map_type)
-{
-    if (mappings.empty())
+    template <typename KeyType, typename ValueType>
+    void initialize_map_from_mappings(
+        const std::vector<std::string> &mappings,
+        std::unordered_map<KeyType, std::vector<ValueType>> &map,
+        const std::string &map_type)
     {
-        RCLCPP_FATAL(this->get_logger(), "Parameter '%s' is empty or not set. Exiting...", map_type.c_str());
-        throw std::runtime_error("Parameter '" + map_type + "' is empty or not set");
-    }
-
-    for (const auto &mapping : mappings)
-    {
-        std::istringstream iss(mapping);
-        KeyType key;
-        std::vector<ValueType> values;
-        char delimiter;
-
-        if (!(iss >> key >> delimiter))
+        if (mappings.empty())
         {
-            RCLCPP_ERROR(this->get_logger(), "Invalid mapping format: %s", mapping.c_str());
-            continue;
+            RCLCPP_FATAL(this->get_logger(), "Parameter '%s' is empty or not set. Exiting...", map_type.c_str());
+            throw std::runtime_error("Parameter '" + map_type + "' is empty or not set");
         }
 
-        ValueType value;
-        while (iss >> value)
+        for (const auto &mapping : mappings)
         {
-            values.push_back(value);
-            iss >> delimiter; // consume the comma if present
-        }
+            std::istringstream iss(mapping);
+            KeyType key;
+            std::vector<ValueType> values;
+            char delimiter;
 
-        if (values.empty())
-        {
-            RCLCPP_ERROR(this->get_logger(), "No values found for key: %ld", static_cast<int64_t>(key));
-            continue;
-        }
+            if (!(iss >> key >> delimiter))
+            {
+                RCLCPP_ERROR(this->get_logger(), "Invalid mapping format: %s", mapping.c_str());
+                continue;
+            }
 
-        map[key] = values;
-        RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
-                    static_cast<int64_t>(key), [&values]()
-                    {
+            ValueType value;
+            while (iss >> value)
+            {
+                values.push_back(value);
+                iss >> delimiter; // consume the comma if present
+            }
+
+            if (values.empty())
+            {
+                RCLCPP_ERROR(this->get_logger(), "No values found for key: %ld", static_cast<int64_t>(key));
+                continue;
+            }
+
+            map[key] = values;
+            RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
+                        static_cast<int64_t>(key), [&values]()
+                                                   {
                         std::ostringstream oss;
                         for (size_t i = 0; i < values.size(); ++i)
                         {
@@ -139,29 +138,25 @@ void initialize_map_from_mappings(
                                 oss << ", ";
                             oss << values[i];
                         }
-                        return oss.str();
-                    }()
-                    .c_str());
+                        return oss.str(); }().c_str());
+        }
+
+        if (map.empty())
+        {
+            RCLCPP_FATAL(this->get_logger(), "No valid mappings were created for '%s'. Exiting...", map_type.c_str());
+            throw std::runtime_error("No valid mappings were created for '" + map_type + "'");
+        }
     }
 
-    if (map.empty())
+    void initialize_motor_to_sensor_map()
     {
-        RCLCPP_FATAL(this->get_logger(), "No valid mappings were created for '%s'. Exiting...", map_type.c_str());
-        throw std::runtime_error("No valid mappings were created for '" + map_type + "'");
+        initialize_map_from_mappings<int64_t, int64_t>(motor_sensor_mappings_, motor_to_sensor_map_, "motor_sensor_mappings");
     }
-}
 
-
-void initialize_motor_to_sensor_map()
-{
-    initialize_map_from_mappings<int64_t, int64_t>(motor_sensor_mappings_, motor_to_sensor_map_, "motor_sensor_mappings");
-}
-
-void initialize_sensor_to_weight_map()
-{
-    initialize_map_from_mappings<int64_t, double>(sensor_weight_mappings_, sensor_to_weight_map_, "sensor_weight_mappings");
-}
-
+    void initialize_sensor_to_weight_map()
+    {
+        initialize_map_from_mappings<int64_t, double>(sensor_weight_mappings_, sensor_to_weight_map_, "sensor_weight_mappings");
+    }
 
     // Callback function for receiving measured normalized forces
     void measured_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
@@ -200,88 +195,100 @@ void initialize_sensor_to_weight_map()
 
     // Function to compute and publish the motor errors
     void compute_and_publish_error()
-{
-    // Initialize the motor error message
-    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped error_msg;
-    error_msg.header.stamp = this->now(); // Set the timestamp for the message
-
-    // Iterate over each motor ID to compute the error
-    for (int64_t motor_id : motor_ids_)
     {
-        auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id); // Find the associated sensor IDs for the motor
-        if (sensor_ids_iter == motor_to_sensor_map_.end())          // Check if the motor has a valid mapping
-        {
-            RCLCPP_ERROR(this->get_logger(), "No mapping found for motor ID: %ld", motor_id);
-            continue;
-        }
+        // Initialize the motor error message
+        uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
+        velocity_msg.header.stamp = this->now(); // Set the timestamp for the message
 
-        const auto &sensor_ids = sensor_ids_iter->second; // Get the associated sensor IDs for the motor
-        double total_weighted_error = 0.0;                // Sum of weighted errors for the motor
-        double total_weights = 0.0;                       // Sum of sensor weights
-
-        // Iterate over each sensor ID to compute the weighted error
-        for (int64_t sensor_id : sensor_ids)
+        // Iterate over each motor ID to compute the error
+        for (int64_t motor_id : motor_ids_)
         {
-            // Find the weight(s) associated with the sensor
-            auto weight_iter = sensor_to_weight_map_.find(sensor_id);
-            if (weight_iter == sensor_to_weight_map_.end()) // Check if the sensor has a valid weight mapping
+            auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id); // Find the associated sensor IDs for the motor
+            if (sensor_ids_iter == motor_to_sensor_map_.end())          // Check if the motor has a valid mapping
             {
-                RCLCPP_ERROR(this->get_logger(), "No mapping found for sensor ID: %ld", sensor_id);
+                RCLCPP_ERROR(this->get_logger(), "No mapping found for motor ID: %ld", motor_id);
                 continue;
             }
-
-            const auto &weights = weight_iter->second;
-
-            // Find the index of the sensor ID in the measured and desired forces
-            auto measured_force_iter = std::find(measured_norm_forces_.ids.begin(), measured_norm_forces_.ids.end(), sensor_id);
-            auto desired_force_iter = std::find(desired_norm_forces_.ids.begin(), desired_norm_forces_.ids.end(), sensor_id);
-
-            // Check if the sensor ID is found in the measured and desired forces
-            if (measured_force_iter == measured_norm_forces_.ids.end() || desired_force_iter == desired_norm_forces_.ids.end())
+            else
             {
-                RCLCPP_ERROR(this->get_logger(), "Sensor ID: %ld not found in forces", sensor_id);
-                continue;
+                RCLCPP_INFO(this->get_logger(), "Ok mapping for motor ID: %ld", motor_id);
             }
 
-            // Compute the indices of the sensor ID in the measured and desired forces
-            size_t measured_id = std::distance(measured_norm_forces_.ids.begin(), measured_force_iter);
-            size_t desired_id = std::distance(desired_norm_forces_.ids.begin(), desired_force_iter);
+            const auto &sensor_ids = sensor_ids_iter->second; // Get the associated sensor IDs for the motor
+            double total_weighted_error = 0.0;                // Sum of weighted errors for the motor
+            double total_weights = 0.0;                       // Sum of sensor weights
 
-            // Retrieve the measured and desired normalized forces
-            double measured_norm = measured_norm_forces_.data[measured_id];
-            double desired_norm = desired_norm_forces_.data[desired_id];
-
-            // Compute the weighted error for each weight associated with the sensor
-            for (const auto &weight : weights)
+            // Iterate over each sensor ID to compute the weighted error
+            for (int64_t sensor_id : sensor_ids)
             {
-                double error = (desired_norm - measured_norm) * weight; // Weighted error
-                total_weighted_error += error;
-                total_weights += weight; // Sum up the weights
+                // Find the weight(s) associated with the sensor
+                auto weight_iter = sensor_to_weight_map_.find(sensor_id);
+                if (weight_iter == sensor_to_weight_map_.end()) // Check if the sensor has a valid weight mapping
+                {
+                    RCLCPP_ERROR(this->get_logger(), "No mapping found for sensor ID: %ld", sensor_id);
+                    continue;
+                }
+                else
+                {
+                    RCLCPP_INFO(this->get_logger(), "Ok mapping for sensor ID: %ld", sensor_id);
+                }
+
+                const auto &weights = weight_iter->second;
+
+                // Find the index of the sensor ID in the measured and desired forces
+                auto measured_force_iter = std::find(measured_norm_forces_.ids.begin(), measured_norm_forces_.ids.end(), sensor_id);
+                auto desired_force_iter = std::find(desired_norm_forces_.ids.begin(), desired_norm_forces_.ids.end(), sensor_id);
+
+                // Check if the sensor ID is found in the measured and desired forces
+                if (desired_force_iter == desired_norm_forces_.ids.end())
+                {
+                    RCLCPP_ERROR(this->get_logger(), "Sensor ID: %ld not found in norm forces desired", sensor_id);
+                    continue;
+                }
+                else if (measured_force_iter == measured_norm_forces_.ids.end())
+                {
+                    RCLCPP_ERROR(this->get_logger(), "Sensor ID: %ld not found in norm forces measured", sensor_id);
+                    continue;
+                }
+
+                // Compute the indices of the sensor ID in the measured and desired forces
+                size_t measured_id = std::distance(measured_norm_forces_.ids.begin(), measured_force_iter);
+                size_t desired_id = std::distance(desired_norm_forces_.ids.begin(), desired_force_iter);
+
+                // Retrieve the measured and desired normalized forces
+                double measured_norm = measured_norm_forces_.data[measured_id];
+                double desired_norm = desired_norm_forces_.data[desired_id];
+
+                // Compute the weighted error for each weight associated with the sensor
+                for (const auto &weight : weights)
+                {
+                    double error = (desired_norm - measured_norm) * weight; // Weighted error
+                    total_weighted_error += error;
+                    total_weights += weight; // Sum up the weights
+                }
+            }
+
+            // Calculate the weighted average error for the motor
+            if (total_weights > 0.0)
+            {
+                double average_error = total_weighted_error / total_weights;
+                velocity_msg.ids.push_back(motor_id);
+                velocity_msg.data.push_back(gain_ * average_error); // Apply the proportional gain to the average error
+                RCLCPP_INFO(this->get_logger(), "Published error for motor ID: %ld - Error: %f", motor_id, average_error);
+            }
+            else
+            {
+                RCLCPP_ERROR(this->get_logger(), "Total weight is zero for motor ID: %ld", motor_id);
             }
         }
 
-        // Calculate the weighted average error for the motor
-        if (total_weights > 0.0)
-        {
-            double average_error = total_weighted_error / total_weights;
-            error_msg.ids.push_back(motor_id);
-            error_msg.data.push_back(gain_ * average_error); // Apply the proportional gain to the average error
-            RCLCPP_INFO(this->get_logger(), "Published error for motor ID: %ld - Error: %f", motor_id, average_error);
-        }
-        else
-        {
-            RCLCPP_ERROR(this->get_logger(), "Total weight is zero for motor ID: %ld", motor_id);
-        }
+        // Publish the computed motor errors
+        measured_velocity_pub_->publish(velocity_msg);
+
+        // Reset the flags for receiving new data
+        desired_norm_forces_received_ = false;
+        measured_norm_forces_received_ = false;
     }
-
-    // Publish the computed motor errors
-    measured_velocity_pub_->publish(error_msg);
-
-    // Reset the flags for receiving new data
-    desired_norm_forces_received_ = false;
-    measured_norm_forces_received_ = false;
-}
-
 };
 
 int main(int argc, char *argv[])

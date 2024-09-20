@@ -33,6 +33,8 @@ public:
         : Node("euler_integrator"),
         dt_(this->declare_parameter<double>("dt", 0.001)),  // Get the integration time step (dt) from parameters
         motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
+        // motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", {35, 36, 37, 38})),
+
         motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
         measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),  // Get proportional result topic from parameters
         desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "desired_position")),  // Get desired position topic from parameters
