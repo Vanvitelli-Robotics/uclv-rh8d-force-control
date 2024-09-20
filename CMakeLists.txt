@@ -41,7 +41,15 @@ ament_target_dependencies(
   "rclcpp"
   "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
   "std_srvs"
+)
 
+
+add_executable(task src/task_node.cpp)
+ament_target_dependencies(
+  task
+  "rclcpp"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
 )
 
 install(TARGETS 
