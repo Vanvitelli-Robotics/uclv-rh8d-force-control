@@ -7,10 +7,10 @@
 
 using namespace std::chrono_literals;
 
-class TaskNode : public rclcpp::Node
+class Task : public rclcpp::Node
 {
 public:
-    TaskNode() : Node("task_node")
+    Task() : Node("task")
     {
         // Publisher per desired_position
         motor_positions_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>("desired_position", 10);
