@@ -49,7 +49,7 @@ private:
         motor_positions_msg.ids = {31, 32, 33, 34, 35, 36, 37, 38};
         motor_positions_msg.positions = {100, 2000, 2000, 3000, 100, 100, 100, 100};
         motor_positions_pub_->publish(motor_positions_msg);
-        RCLCPP_INFO(this->get_logger(), "Posizione iniziale pubblicata.");
+        RCLCPP_INFO(this->get_logger(), "Init position published.");
     }
 
     void set_norms()
@@ -59,7 +59,7 @@ private:
         norm_forces_msg.data = {0.6, 0.6, 0.6, 0.6, 0.6};
         norm_forces_msg.ids = {0, 1, 2, 3, 4};
         norm_forces_pub_->publish(norm_forces_msg);
-        RCLCPP_INFO(this->get_logger(), "Norme desiderate pubblicate.");
+        RCLCPP_INFO(this->get_logger(), "Desired force norms published.");
     }
 
     void start_service()
@@ -68,7 +68,7 @@ private:
         auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
         request->data = true;
         auto result = startstop_client_->async_send_request(request);
-        RCLCPP_INFO(this->get_logger(), "Servizio avviato.");
+        RCLCPP_INFO(this->get_logger(), "Service started.");
     }
 
     void stop_service()
@@ -77,9 +77,8 @@ private:
         auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
         request->data = false;
         auto result = startstop_client_->async_send_request(request);
-        RCLCPP_INFO(this->get_logger(), "Servizio fermato.");
+        RCLCPP_INFO(this->get_logger(), "Service stopped.");
 
-        // Pubblica nuovamente la posizione iniziale
         init_position();
     }
 
@@ -93,7 +92,7 @@ private:
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<TaskNode>();
+    auto node = std::make_shared<Task>();
 
     node->run();  // Esegue il ciclo con interazione dell'utente
 
