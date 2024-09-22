@@ -122,7 +122,6 @@ void initialize_map_from_mappings(
 
 
 
-
 void initialize_motor_to_sensor_map()
     {
         initialize_map_from_mappings(motor_sensor_mappings_, motor_to_sensor_map_, "motor_sensor_mappings");
