@@ -61,6 +61,7 @@ initialize_motor_to_sensor_map();
 
 private:
 
+template <typename KeyType, typename ValueType>
 void initialize_map_from_mappings(
         const std::vector<std::string> &mappings,
         std::unordered_map<int64_t, std::vector<double>> &map,
