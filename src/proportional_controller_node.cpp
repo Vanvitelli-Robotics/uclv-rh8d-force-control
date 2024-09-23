@@ -238,7 +238,7 @@ private:
 template <typename KeyType, typename ValueType>
     void initialize_map_from_mappings(
         const std::vector<std::string> &mappings,
-        std::unordered_map<int64_t, std::vector<double>> &map,
+        std::unordered_map<KeyType, std::vector<ValueType>> &map,
         const std::string &map_type)
     {
         if (mappings.empty())
@@ -250,8 +250,8 @@ template <typename KeyType, typename ValueType>
         for (const auto &mapping : mappings)
         {
             std::istringstream iss(mapping);
-            int64_t key;
-            std::vector<double> values;
+            KeyType key;
+            std::vector<ValueType> values;
             char delimiter;
 
             if (!(iss >> key >> delimiter))
@@ -260,7 +260,7 @@ template <typename KeyType, typename ValueType>
                 continue;
             }
 
-            double value;
+            ValueType value;
             while (iss >> value)
             {
                 values.push_back(value);
@@ -269,13 +269,13 @@ template <typename KeyType, typename ValueType>
 
             if (values.empty())
             {
-                RCLCPP_ERROR(this->get_logger(), "No values found for key: %ld", key);
+                RCLCPP_ERROR(this->get_logger(), "No values found for key: %ld", static_cast<int64_t>(key));
                 continue;
             }
 
             map[key] = values;
             RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
-                        key, [&values]()
+                        static_cast<int64_t>(key), [&values]()
                                                    {
                         std::ostringstream oss;
                         for (size_t i = 0; i < values.size(); ++i)
