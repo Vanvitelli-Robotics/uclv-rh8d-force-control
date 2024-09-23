@@ -213,7 +213,6 @@ private:
                         // Retrieve the measured and desired normalized forces
                         double measured_norm = measured_norm_forces_.data[measured_id];
 
-                        RCLCPP_INFO(this->get_logger(), "measured norm for id %d: %f", measured_id, measured_norm);
                     }
                 }
 
