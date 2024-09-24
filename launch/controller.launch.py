@@ -28,12 +28,24 @@ def generate_launch_description():
         "sensor_weight_mappings": ["0:1", "1:1", "2:1", "3:0.6", "4:0.4"],
         "gain": 100.0,  # Proportional gain for the controller
         "desired_norm_topic": "/cmd/desired_norm_forces",  # Topic for desired forces
-        "set_gain_service_name": "set_gain"  # Service name to set the gain
+        "set_gain_service_name": "set_gain",  # Service name to set the gain
+        "activate_controller_service_name": "activate_controller"
     }
 
     # Parameters specific to the force norm node
     force_norm_params = {
         "sensor_state_topic": "sensor_state"  # Topic for sensor state
+    }
+
+    # Parameters specific to the Close node
+    close_node_params = {
+        "measured_norm_topic": "norm_forces",  # Topic for normalized forces
+        "measured_velocity_topic": "measured_velocity",  # Topic for velocity
+        "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Motor-sensor mappings
+        "threshold": 0.1,  # Threshold for forces
+        "initial_velocity": 100,  # Initial velocity
+        "start_stop_service_name": "close",  # Service name for start/stop
+        "proportional_service_name": "activate_controller"  # Proportional controller service
     }
 
     return LaunchDescription([
@@ -68,4 +80,14 @@ def generate_launch_description():
                 force_norm_params  # Node-specific parameters
             ]
         ),
+        Node(
+            output='screen',
+            package='repo_controller',
+            executable='close',
+            name='close_node',
+            parameters=[
+                common_params,  # Common parameters
+                close_node_params  # Node-specific parameters for the Close node
+            ]
+        )
     ])
