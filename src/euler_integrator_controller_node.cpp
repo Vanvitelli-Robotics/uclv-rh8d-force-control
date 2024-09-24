@@ -178,6 +178,11 @@ private:
                 response->success = true;
                 response->message = "Timer stopped.";
                 RCLCPP_INFO(this->get_logger(), "Timer stopped.");
+
+
+                // pub last motor positions
+
+                desired_position_pub_->publish(motor_positions_);
             }
             else
             {
