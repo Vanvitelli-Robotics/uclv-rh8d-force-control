@@ -220,6 +220,7 @@ void process_norm_forces()
     bool sensor_3_above_threshold = false;
     bool sensor_4_above_threshold = false;
 
+    // Ciclo attraverso i motori presenti in motor_ids_
     for (int64_t motor_id : motor_ids_)
     {
         auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id);
@@ -231,6 +232,7 @@ void process_norm_forces()
 
         const auto &sensor_ids = sensor_ids_iter->second;
 
+        // Controlla i sensori associati ai motori presenti
         for (int64_t sensor_id : sensor_ids)
         {
             auto measured_force_iter = std::find(measured_norm_forces_.ids.begin(), measured_norm_forces_.ids.end(), sensor_id);
@@ -260,23 +262,47 @@ void process_norm_forces()
         }
     }
 
-    if (all_above_threshold && (sensor_3_above_threshold || sensor_4_above_threshold))
-    {
-        // qui disattivo il close
-        RCLCPP_INFO(this->get_logger(), "Stopping close node");
-        service_activated_ = false;
-        
+    // Verifica se i sensori 3 e 4 sono associati a qualche motore
+    bool check_sensor_3 = std::find_if(motor_to_sensor_map_.begin(), motor_to_sensor_map_.end(),
+                                       [](const auto& pair) {
+                                           return std::find(pair.second.begin(), pair.second.end(), 3) != pair.second.end();
+                                       }) != motor_to_sensor_map_.end();
 
-        RCLCPP_INFO(this->get_logger(), "Sending service request to activate proportional controller...");
+    bool check_sensor_4 = std::find_if(motor_to_sensor_map_.begin(), motor_to_sensor_map_.end(),
+                                       [](const auto& pair) {
+                                           return std::find(pair.second.begin(), pair.second.end(), 4) != pair.second.end();
+                                       }) != motor_to_sensor_map_.end();
+
+    // Esegui il check finale solo se almeno un sensore associato è sopra la soglia
+    if (all_above_threshold && 
+        ((!check_sensor_3 || sensor_3_above_threshold) && 
+         (!check_sensor_4 || sensor_4_above_threshold)))
+    {
+        // Disattivo il nodo "close" e attivo il controller proporzionale
+        RCLCPP_INFO(this->get_logger(), "Stopping close node and activating proportional controller");
+        service_activated_ = false;
+
+        // Invia richiesta per attivare il controller proporzionale
         auto request2 = std::make_shared<std_srvs::srv::SetBool::Request>();
         request2->data = true;
 
-        // qui attivo il proporzionale
-        auto result2 = proportional_service_client_->async_send_request(request2);
+        proportional_service_client_->async_send_request(request2);
         RCLCPP_INFO(this->get_logger(), "Request sent to activate the proportional node.");
-
     }
 }
+
+
+/*
+Controllo della presenza dei sensori 3 e 4: 
+    Usando std::find_if, verifico se i sensori 3 e 4 sono associati a qualche motore presente nel mapping.
+    Se non ci sono, le variabili check_sensor_3 e check_sensor_4 saranno false.
+Condizione dell'if: 
+    Se i sensori 3 o 4 non sono presenti, vengono ignorati nel controllo 
+    (sensor_3_above_threshold || sensor_4_above_threshold). 
+    Se sono presenti, la condizione normale viene applicata.
+*/
+
+
 };
 
 
