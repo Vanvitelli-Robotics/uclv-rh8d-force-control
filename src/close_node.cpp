@@ -303,6 +303,88 @@ Condizione dell'if:
 */
 
 
+/*
+void process_norm_forces()
+{
+    bool any_motor_stopped = false;
+
+    // Loop through motors and check their associated sensors
+    for (int64_t motor_id : motor_ids_)
+    {
+        auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id);
+        if (sensor_ids_iter == motor_to_sensor_map_.end())
+        {
+            RCLCPP_ERROR(this->get_logger(), "No mapping found for motor ID: %ld", motor_id);
+            continue;
+        }
+
+        const auto &sensor_ids = sensor_ids_iter->second;
+        bool stop_motor = false;  // Flag to check if motor should stop
+
+        // Check sensors associated with the motor
+        for (int64_t sensor_id : sensor_ids)
+        {
+            auto measured_force_iter = std::find(measured_norm_forces_.ids.begin(), measured_norm_forces_.ids.end(), sensor_id);
+            if (measured_force_iter == measured_norm_forces_.ids.end())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Sensor ID: %ld not found in norm forces measured", sensor_id);
+                continue;
+            }
+
+            size_t measured_id = std::distance(measured_norm_forces_.ids.begin(), measured_force_iter);
+            double measured_norm = measured_norm_forces_.data[measured_id];
+
+            RCLCPP_INFO(this->get_logger(), "Measured norm for sensor ID %ld: %f", sensor_id, measured_norm);
+
+            if (measured_norm >= threshold_)  // Check if norm exceeds threshold
+            {
+                stop_motor = true;
+            }
+        }
+
+        // Stop motor if any associated sensor exceeds the threshold
+        if (stop_motor)
+        {
+            publish_motor_velocity(motor_id, 0);  // Stop the motor
+            any_motor_stopped = true;
+            RCLCPP_INFO(this->get_logger(), "Motor ID %ld stopped due to threshold exceeded.", motor_id);
+        }
+    }
+
+    if (any_motor_stopped)
+    {
+        RCLCPP_INFO(this->get_logger(), "At least one motor stopped. Proportional controller activation skipped.");
+    }
+    else
+    {
+        // If no motor stopped, continue with the usual logic
+        RCLCPP_INFO(this->get_logger(), "All motors are below threshold. Activating proportional controller...");
+        activate_proportional_controller();
+    }
+}
+
+void publish_motor_velocity(int64_t motor_id, double velocity)
+{
+    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
+    velocity_msg.ids.push_back(motor_id);
+    velocity_msg.data.push_back(velocity);
+
+    measured_velocity_pub_->publish(velocity_msg);  // Publish the new velocity (0 to stop)
+    RCLCPP_INFO(this->get_logger(), "Published velocity %f for motor ID %ld", velocity, motor_id);
+}
+
+void activate_proportional_controller()
+{
+    // Your code to activate the proportional controller
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = true;
+
+    proportional_service_client_->async_send_request(request);
+    RCLCPP_INFO(this->get_logger(), "Request sent to activate the proportional node.");
+}
+
+*/
+
 };
 
 
