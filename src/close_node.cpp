@@ -155,29 +155,34 @@ private:
     }
 
     void service_activate_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-                                   std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+                               std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+{
+    if (request->data) // Activate the node
     {
-        if (request->data) // Activate the node
-        {
-            RCLCPP_INFO(this->get_logger(), "Service called to activate node.");
-            service_activated_ = true;
+        RCLCPP_INFO(this->get_logger(), "Service called to activate node.");
+        service_activated_ = true;
 
-            activate_integrator_service();
+        activate_integrator_service();
 
-            response->success = true;
-            response->message = "Node activated successfully.";
+        response->success = true;
+        response->message = "Node activated successfully.";
 
-            publish_initial_velocity();
-            RCLCPP_INFO(this->get_logger(), "Publishing initial velocity.");
-        }
-        else
-        {
-            RCLCPP_WARN(this->get_logger(), "Service called with deactivate command.");
-            service_activated_ = false;
-            response->success = true;
-            response->message = "Node deactivated successfully.";
-        }
+        publish_initial_velocity();
+        RCLCPP_INFO(this->get_logger(), "Publishing initial velocity.");
     }
+    else // Deactivate the node and stop the proportional controller
+    {
+        RCLCPP_WARN(this->get_logger(), "Service called with deactivate command.");
+        service_activated_ = false;
+
+        // Send request to stop the proportional controller
+        deactivate_proportional_controller();
+
+        response->success = true;
+        response->message = "Node deactivated successfully.";
+    }
+}
+
 
     void measured_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
     {
@@ -281,6 +286,16 @@ private:
         proportional_service_client_->async_send_request(request);
         RCLCPP_INFO(this->get_logger(), "Request sent to activate the proportional node.");
     }
+
+    void deactivate_proportional_controller()
+{
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = false;
+
+    proportional_service_client_->async_send_request(request);
+    RCLCPP_INFO(this->get_logger(), "Request sent to deactivate the proportional node.");
+}
+
 };
 
 int main(int argc, char *argv[])
