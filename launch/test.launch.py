@@ -43,7 +43,7 @@ def generate_launch_description():
         "measured_velocity_topic": "measured_velocity",  # Topic for velocity
         "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Motor-sensor mappings
         "threshold": 0.1,  # Threshold for forces
-        "initial_velocity": 100,  # Initial velocity
+        "initial_velocity": 300,  # Initial velocity
         "start_stop_service_name": "close",  # Service name for start/stop
         "proportional_service_name": "activate_controller"  # Proportional controller service
     }
@@ -53,8 +53,8 @@ def generate_launch_description():
             output='screen',
             package='repo_controller',
             executable='euler_integrator_controller',
-            name='euler_integrator',
-            namespace='euler',
+            name='euler_integrator_controller',
+            # namespace='euler_integrator_controller',
             parameters=[
                 common_params,  # Common parameters
                 euler_integrator_params  # Node-specific parameters
@@ -65,7 +65,7 @@ def generate_launch_description():
             package='repo_controller',
             executable='proportional_controller',
             name='proportional_controller',
-            namespace='proportional',
+            # namespace='proportional_controller',
             parameters=[
                 common_params,  # Common parameters
                 norm_forces_params,  # Shared parameters for norm forces
@@ -77,7 +77,7 @@ def generate_launch_description():
             package='repo_controller',
             executable='force_norm',
             name='force_norm',
-            namespace='force',
+            # namespace='force_norm',
             parameters=[
                 norm_forces_params,  # Shared parameters for norm forces
                 force_norm_params  # Node-specific parameters
@@ -88,7 +88,7 @@ def generate_launch_description():
             package='repo_controller',
             executable='close',
             name='close_node',
-            namespace='close',
+            # namespace='close',
             parameters=[
                 common_params,  # Common parameters
                 close_node_params  # Node-specific parameters for the Close node
@@ -99,7 +99,7 @@ def generate_launch_description():
             package='uclv_seed_robotics_ros',
             executable='hand_driver',
             name='hand_driver',
-            namespace='hand',
+            # namespace='hand_driver',
             parameters=[
                 common_params,  # Common parameters
                 {"serial_port": "/dev/ttyUSB0"},  # Serial port for hand driver
@@ -115,7 +115,7 @@ def generate_launch_description():
             package="uclv_seed_robotics_ros",
             executable='fingertip_sensors',
             name='fingertip_sensors',
-            namespace='sensors',
+            # namespace='fingertip_sensors',
             parameters=[
                 common_params,  # Common parameters
                 {"serial_port": "/dev/ttyUSB1"},  # Serial port for the fingertip sensors
