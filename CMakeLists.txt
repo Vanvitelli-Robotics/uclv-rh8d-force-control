@@ -43,6 +43,13 @@ ament_target_dependencies(
   "std_srvs"
 )
 
+add_executable(open src/open_node.cpp)
+ament_target_dependencies(
+  open
+  "rclcpp"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
+)
 
 
 install(TARGETS 
@@ -50,6 +57,7 @@ install(TARGETS
       proportional_controller
       force_norm
       close
+      open
       DESTINATION 
         lib/${PROJECT_NAME})
 

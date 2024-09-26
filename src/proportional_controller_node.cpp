@@ -18,7 +18,7 @@ public:
     std::string desired_norm_topic_;      // Name of the topic for desired normalized forces
     std::string measured_velocity_topic_; // Name of the topic for publishing errors
     std::string set_gain_service_name_;   // Name of the service to set gain
-    std::string activate_controller_service_name_; // Name of the service to activate the controller
+    std::string node_service_name_; // Name of the service to activate the controller
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped measured_norm_forces_; // Message for measured normalized forces
@@ -56,7 +56,7 @@ public:
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
           measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),
           set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain")),
-          activate_controller_service_name_(this->declare_parameter<std::string>("activate_controller_service_name", "activate_controller"))
+          node_service_name_(this->declare_parameter<std::string>("node_service_name", "activate_controller"))
     {
         // Initialize mappings
         initialize_motor_to_sensor_map();
@@ -80,7 +80,7 @@ public:
 
         // Create service to activate the controller
         activate_controller_service_ = this->create_service<std_srvs::srv::SetBool>(
-            activate_controller_service_name_, std::bind(&ProportionalController::activate_controller_callback, this, std::placeholders::_1, std::placeholders::_2));
+            node_service_name_, std::bind(&ProportionalController::activate_controller_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:

@@ -1,30 +1,46 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
+
 #include <memory>
 #include <vector>
 
 using std::placeholders::_1;
 
-class StopAndSetPosition : public rclcpp::Node
+class Open : public rclcpp::Node
 {
 public:
-    StopAndSetPosition()
-        : Node("stop_and_set_position_node"),
-          integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "/integrator_stop")),
-          proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "/proportional_stop")),
-          motor_position_topic_(this->declare_parameter<std::string>("motor_position_topic", "motor_position")),
+    std::string integrator_service_name_;
+    std::string proportional_service_name_;
+    std::string motor_position_topic_;
+    std::string node_service_name_;
+
+    std::vector<int64_t> motor_ids_;
+    std::vector<double> motor_positions_;
+
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr motor_position_pub_;
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr integrator_client_;
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr proportional_client_;
+
+    Open()
+        : Node("open_node"),
+          integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "startstop")),
+          proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "activate_controller")),
+          motor_position_topic_(this->declare_parameter<std::string>("motor_position_topic", "desired_position")),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>{})),
-          motor_positions_(this->declare_parameter<std::vector<double>>("motor_positions", std::vector<double>{}))
+          motor_positions_(this->declare_parameter<std::vector<double>>("motor_positions", std::vector<double>{})),
+          node_service_name_(this->declare_parameter<std::string>("node_service_name", "close"))
+
     {
-        // Create the service
-        stop_and_set_position_service_ = this->create_service<std_srvs::srv::SetBool>(
-            "stop_and_set_position",
-            std::bind(&StopAndSetPosition::service_callback, this, _1, std::placeholders::_2));
 
         // Create the publisher for motor positions
-        motor_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
+        motor_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
             motor_position_topic_, 10);
+
+        start_stop_service_ = this->create_service<std_srvs::srv::SetBool>(
+            node_service_name_, std::bind(&Open::service_callback, this, _1, std::placeholders::_2));
 
         // Clients for integrator and proportional controller
         integrator_client_ = this->create_client<std_srvs::srv::SetBool>(integrator_service_name_);
@@ -32,25 +48,13 @@ public:
     }
 
 private:
-    std::string integrator_service_name_;
-    std::string proportional_service_name_;
-    std::string motor_position_topic_;
-
-    std::vector<int64_t> motor_ids_;
-    std::vector<double> motor_positions_;
-
-    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stop_and_set_position_service_;
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr motor_position_pub_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr integrator_client_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr proportional_client_;
-
     void service_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                           std::shared_ptr<std_srvs::srv::SetBool::Response> response)
     {
         if (request->data)
         {
             RCLCPP_INFO(this->get_logger(), "Stopping integrator and proportional controller, setting motor positions.");
-            
+
             // Stop integrator
             if (integrator_client_->wait_for_service(std::chrono::seconds(1)))
             {
@@ -84,11 +88,7 @@ private:
             }
 
             // Publish motor positions
-            uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped motor_position_msg;
-            motor_position_msg.ids = motor_ids_;
-            motor_position_msg.data = motor_positions_;
-            motor_position_pub_->publish(motor_position_msg);
-            RCLCPP_INFO(this->get_logger(), "Published motor positions.");
+            publish_initial_velocity();
 
             response->success = true;
             response->message = "Motors set to specified positions, integrator and proportional stopped.";
@@ -100,13 +100,44 @@ private:
             response->message = "Service called with deactivate command.";
         }
     }
+
+    void publish_initial_velocity()
+    {
+
+        uclv_seed_robotics_ros_interfaces::msg::MotorPositions msg;
+        // Set motor IDs and initial velocity
+        for (int64_t motor_id : motor_ids_)
+        {
+            msg.ids.push_back(motor_id);
+            RCLCPP_INFO(this->get_logger(), "motor id: %d", motor_id);
+        }
+        for (auto pos : motor_positions_)
+        {
+            msg.positions.push_back(pos);
+            RCLCPP_INFO(this->get_logger(), "pos id: %d", pos);
+        }
+
+        // RCLCPP_INFO(this->get_logger(), "Publishing initial velocity: %ld", initial_velocity_);
+        motor_position_pub_->publish(msg);
+    }
 };
 
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<StopAndSetPosition>();
-    rclcpp::spin(node);
+
+    try
+    {
+        auto close_node = std::make_shared<Open>();
+        rclcpp::spin(close_node);
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Exception caught: %s", e.what());
+        rclcpp::shutdown();
+        return 1;
+    }
+
     rclcpp::shutdown();
     return 0;
 }

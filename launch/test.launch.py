@@ -19,7 +19,7 @@ def generate_launch_description():
         "dt": 0.001,  # Time step for integration
         "motor_thresholds": [100, 3995],  # Thresholds for motors (same for hand driver)
         "desired_position_topic": "desired_position",  # Topic for desired positions
-        "start_stop_service_name": "startstop"  # Service name to start/stop the integration
+        "node_service_name": "startstop"  # Service name to start/stop the integration
     }
 
     # Parameters specific to the proportional controller node
@@ -29,7 +29,7 @@ def generate_launch_description():
         "gain": 100.0,  # Proportional gain for the controller
         "desired_norm_topic": "/cmd/desired_norm_forces",  # Topic for desired forces
         "set_gain_service_name": "set_gain",  # Service name to set the gain
-        "activate_controller_service_name": "activate_controller"
+        "node_service_name": "activate_controller"
     }
 
     # Parameters specific to the force norm node
@@ -44,7 +44,7 @@ def generate_launch_description():
         "motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"],  # Motor-sensor mappings
         "threshold": 0.1,  # Threshold for forces
         "initial_velocity": 300,  # Initial velocity
-        "start_stop_service_name": "close",  # Service name for start/stop
+        "node_service_name": "close",  # Service name for start of close node
         "proportional_service_name": "activate_controller"  # Proportional controller service
     }
 
@@ -81,6 +81,16 @@ def generate_launch_description():
             parameters=[
                 norm_forces_params,  # Shared parameters for norm forces
                 force_norm_params  # Node-specific parameters
+            ]
+        ),
+        Node(
+            output='screen',
+            package='repo_controller',
+            executable='open',
+            name='open_node',
+            parameters=[
+                common_params,
+                {"motor_position":[3000, 100, 100, 100, 100]},
             ]
         ),
         Node(

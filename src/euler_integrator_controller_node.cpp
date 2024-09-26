@@ -27,18 +27,16 @@ public:
     // Topics and services as parameters
     std::string measured_velocity_topic_;
     std::string desired_position_topic_;
-    std::string start_stop_service_name_;
+    std::string node_service_name_;
 
     EulerIntegrator()
         : Node("euler_integrator"),
         dt_(this->declare_parameter<double>("dt", 0.001)),  // Get the integration time step (dt) from parameters
         motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),  // Get motor IDs from parameters
-        // motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", {35, 36, 37, 38})),
-
         motor_thresholds_(this->declare_parameter<std::vector<int64_t>>("motor_thresholds", {100, 3995})),  // Get motor thresholds from parameters
         measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),  // Get proportional result topic from parameters
         desired_position_topic_(this->declare_parameter<std::string>("desired_position_topic", "desired_position")),  // Get desired position topic from parameters
-        start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "startstop")),  // Get start/stop service name from parameters
+        node_service_name_(this->declare_parameter<std::string>("node_service_name", "startstop")),  // Get start/stop service name from parameters
         measured_velocity_received_(false)  // Initialize flag as false
     {
         // Ensure motor IDs are provided
@@ -57,7 +55,7 @@ public:
 
         // Create a service to start/stop the integration process
         start_stop_service_ = create_service<std_srvs::srv::SetBool>(
-            start_stop_service_name_, std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
+            node_service_name_, std::bind(&EulerIntegrator::service_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         // Subscribe to proportional controller data
         measured_velocity_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
@@ -87,6 +85,7 @@ private:
                 auto it = std::find(measured_velocity_->ids.begin(), measured_velocity_->ids.end(), motor_positions_.ids[i]);
                 if (it != measured_velocity_->ids.end())
                 {
+                    motor_positions_.header.stamp = rclcpp::Clock{}.now();  // Get current time
                     size_t index = std::distance(measured_velocity_->ids.begin(), it);
                     // Apply Euler integration based on the error
                     motor_positions_.positions[i] += dt_ * measured_velocity_->data[index];

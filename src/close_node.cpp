@@ -14,7 +14,7 @@ class Close : public rclcpp::Node
 {
 public:
     std::string measured_norm_topic_;                // Topic for normalized forces
-    std::string start_stop_service_name_;            // Name for the start/stop service
+    std::string node_service_name_;                  // Name for the start/stop service
     std::string measured_velocity_topic_;            // Topic for measured velocity
     std::vector<int64_t> motor_ids_;                 // Motor IDs for the velocities
     double threshold_;                               // Threshold for forces
@@ -27,12 +27,12 @@ public:
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_velocity_pub_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_stop_service_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr proportional_service_client_;
-    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr integrator_service_client_; // Client per il servizio dell'integratore
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr integrator_service_client_;
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped measured_norm_forces_;
 
     bool measured_norm_forces_received_ = false;
-    bool service_activated_ = false;
+    bool service_close_actived_ = false;
 
     std::unordered_map<int64_t, std::vector<int64_t>> motor_to_sensor_map_;
 
@@ -44,9 +44,9 @@ public:
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
           threshold_(this->declare_parameter<double>("threshold", 0.1)),
           initial_velocity_(this->declare_parameter<int64_t>("initial_velocity", 100)),
-          start_stop_service_name_(this->declare_parameter<std::string>("start_stop_service_name", "close")),
+          node_service_name_(this->declare_parameter<std::string>("node_service_name", "close")),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "activate_controller")),
-          integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "/startstop")) // Nome del servizio integratore
+          integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "startstop")) // Nome del servizio integratore
 
     {
 
@@ -58,7 +58,7 @@ public:
 
         // Create service for start/stop
         start_stop_service_ = this->create_service<std_srvs::srv::SetBool>(
-            start_stop_service_name_, std::bind(&Close::service_activate_callback, this, _1, std::placeholders::_2));
+            node_service_name_, std::bind(&Close::service_activate_callback, this, _1, std::placeholders::_2));
 
         // Create publisher for velocity
         measured_velocity_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
@@ -155,38 +155,55 @@ private:
     }
 
     void service_activate_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-                               std::shared_ptr<std_srvs::srv::SetBool::Response> response)
-{
-    if (request->data) // Activate the node
+                                   std::shared_ptr<std_srvs::srv::SetBool::Response> response)
     {
-        RCLCPP_INFO(this->get_logger(), "Service called to activate node.");
-        service_activated_ = true;
+        if (request->data) // Activate the node
+        {
+            RCLCPP_INFO(this->get_logger(), "Service called to activate node.");
+            service_close_actived_ = true;
 
-        activate_integrator_service();
+            // Check if integrator service is available before calling it
+            if (!integrator_service_client_->wait_for_service(std::chrono::seconds(1)))
+            {
+                RCLCPP_ERROR(this->get_logger(), "Integrator service not available after waiting.");
+                response->success = false;
+                response->message = "Integrator service unavailable. Failed to activate node.";
+                return;
+            }
 
-        response->success = true;
-        response->message = "Node activated successfully.";
+            publish_initial_velocity();
+            RCLCPP_INFO(this->get_logger(), "Publishing initial velocity.");
 
-        publish_initial_velocity();
-        RCLCPP_INFO(this->get_logger(), "Publishing initial velocity.");
+            activate_integrator_service();
+
+            response->success = true;
+            response->message = "Node activated successfully.";
+        }
+        else // Deactivate the node and stop the proportional controller
+        {
+            RCLCPP_WARN(this->get_logger(), "Service called with deactivate command.");
+            service_close_actived_ = false;
+
+            // Check if the proportional service is available before calling it
+            if (!proportional_service_client_->wait_for_service(std::chrono::seconds(1)))
+            {
+                RCLCPP_ERROR(this->get_logger(), "Proportional controller service not available after waiting.");
+                response->success = false;
+                response->message = "Proportional controller service unavailable. Failed to deactivate node.";
+                return;
+            }
+
+            // deactivate_proportional_controller(); // questo non serve perché sta in open
+            deactivate_integrator_service();
+
+            response->success = true;
+            response->message = "Node deactivated successfully.";
+        }
     }
-    else // Deactivate the node and stop the proportional controller
-    {
-        RCLCPP_WARN(this->get_logger(), "Service called with deactivate command.");
-        service_activated_ = false;
-
-        // Send request to stop the proportional controller
-        deactivate_proportional_controller();
-
-        response->success = true;
-        response->message = "Node deactivated successfully.";
-    }
-}
-
 
     void measured_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
     {
-        if (service_activated_)
+        if (service_close_actived_)
         {
             measured_norm_forces_ = *msg;
             measured_norm_forces_received_ = true;
@@ -199,20 +216,41 @@ private:
 
     void activate_integrator_service()
     {
-        if (!integrator_service_client_->wait_for_service(std::chrono::seconds(1)))
-        {
-            RCLCPP_ERROR(this->get_logger(), "Integrator service not available after waiting.");
-            return;
-        }
-
         auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-        request->data = true; // Attiviamo il servizio
+        request->data = true; // Activating the service
 
-        // Invia la richiesta al servizio
         auto result = integrator_service_client_->async_send_request(request);
         RCLCPP_INFO(this->get_logger(), "Request sent to activate the integrator node.");
     }
 
+    void deactivate_integrator_service()
+    {
+        auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+        request->data = false; // Deactivating the service
+
+        auto result = integrator_service_client_->async_send_request(request);
+        RCLCPP_INFO(this->get_logger(), "Request sent to activate the integrator node.");
+    }
+
+    void activate_proportional_controller()
+    {
+        auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+        request->data = true;
+
+        proportional_service_client_->async_send_request(request);
+        RCLCPP_INFO(this->get_logger(), "Request sent to activate the proportional node.");
+    }
+
+    void deactivate_proportional_controller()
+    {
+        auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+        request->data = false;
+
+        proportional_service_client_->async_send_request(request);
+        RCLCPP_INFO(this->get_logger(), "Request sent to deactivate the proportional node.");
+    }
+
+    // TODO: generica per usarla anche per lo stop
     void publish_motor_velocity(int16_t motor_id, double velocity)
     {
         uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
@@ -254,48 +292,23 @@ private:
 
                 partial_above_threshold = partial_above_threshold || (measured_norm >= threshold_);
 
-                if (measured_norm >= threshold_)
-                {
-                    stop_motor = true;
-                }
+                // TODO: implementare lo stop dei motori
+                // if (measured_norm >= threshold_)
+                // {
+                //     stop_motor = true;
+                // }
             }
             all_above_threshold = all_above_threshold && partial_above_threshold;
-            // if (stop_motor)
-            // {
-            //     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
-            //     velocity_msg.data.push_back(0);
-            //     measured_velocity_pub_->publish(velocity_msg);
-            // }
         }
 
         if (all_above_threshold)
         {
-            // Disattivo il nodo "close" e attivo il controller proporzionale
             RCLCPP_INFO(this->get_logger(), "Stopping close node and activating proportional controller");
-            service_activated_ = false;
+            service_close_actived_ = false;
 
             activate_proportional_controller();
         }
     }
-
-    void activate_proportional_controller()
-    {
-        auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-        request->data = true;
-
-        proportional_service_client_->async_send_request(request);
-        RCLCPP_INFO(this->get_logger(), "Request sent to activate the proportional node.");
-    }
-
-    void deactivate_proportional_controller()
-{
-    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-    request->data = false;
-
-    proportional_service_client_->async_send_request(request);
-    RCLCPP_INFO(this->get_logger(), "Request sent to deactivate the proportional node.");
-}
-
 };
 
 int main(int argc, char *argv[])
