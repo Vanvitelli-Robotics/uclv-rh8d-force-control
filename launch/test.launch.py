@@ -83,16 +83,17 @@ def generate_launch_description():
                 force_norm_params  # Node-specific parameters
             ]
         ),
-        Node(
-            output='screen',
-            package='repo_controller',
-            executable='open',
-            name='open_node',
-            parameters=[
-                common_params,
-                {"motor_position":[3000, 100, 100, 100, 100]},
-            ]
-        ),
+        # Node(
+        #     output='screen',
+        #     package='repo_controller',
+        #     executable='open',
+        #     name='open_node',
+        #     parameters=[
+        #         common_params,
+        #         {"motor_position":[3000, 100, 100, 100, 100]},
+        #         {"motor_ids": [35, 36, 37, 38]},
+        #     ]
+        # ),
         Node(
             output='screen',
             package='repo_controller',

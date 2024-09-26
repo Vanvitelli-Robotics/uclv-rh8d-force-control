@@ -24,15 +24,17 @@ public:
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr integrator_client_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr proportional_client_;
 
+    // da launch file l'apertura non funziona 
     Open()
         : Node("open_node"),
           integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "startstop")),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "activate_controller")),
           motor_position_topic_(this->declare_parameter<std::string>("motor_position_topic", "desired_position")),
-          motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>{})),
-          motor_positions_(this->declare_parameter<std::vector<double>>("motor_positions", std::vector<double>{})),
-          node_service_name_(this->declare_parameter<std::string>("node_service_name", "close"))
-
+        //   motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>{})),
+        //   motor_positions_(this->declare_parameter<std::vector<double>>("motor_positions", std::vector<double>{})),
+            motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", {34, 35, 36, 37, 38})),
+            motor_positions_(this->declare_parameter<std::vector<double>>("motor_positions", {3000, 100, 100, 100, 100})),
+          node_service_name_(this->declare_parameter<std::string>("node_service_name", "open"))
     {
 
         // Create the publisher for motor positions
