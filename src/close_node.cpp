@@ -171,13 +171,14 @@ private:
                 return;
             }
 
+            
+
+            activate_integrator_service();
             publish_initial_velocity();
             RCLCPP_INFO(this->get_logger(), "Publishing initial velocity.");
 
-            activate_integrator_service();
-
             response->success = true;
-            response->message = "Node activated successfully.";
+            response->message = "Node activated successfully - Integration is active.";
         }
         else // Deactivate the node and stop the proportional controller
         {
@@ -193,7 +194,8 @@ private:
                 return;
             }
 
-            // deactivate_proportional_controller(); // questo non serve perché sta in open
+            // capisci bene
+            deactivate_proportional_controller();
             deactivate_integrator_service();
 
             response->success = true;
@@ -251,14 +253,14 @@ private:
     }
 
     // TODO: generica per usarla anche per lo stop
-    void publish_motor_velocity(int16_t motor_id, double velocity)
-    {
-        uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
-        velocity_msg.ids.push_back(motor_id);
-        velocity_msg.data.push_back(velocity);
-        measured_velocity_pub_->publish(velocity_msg); // Publish the new velocity (0 to stop)
-        RCLCPP_INFO(this->get_logger(), "Published velocity %f for motor ID %ld", velocity, motor_id);
-    }
+    // void publish_motor_velocity(int16_t motor_id, double velocity)
+    // {
+    //     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
+    //     velocity_msg.ids.push_back(motor_id);
+    //     velocity_msg.data.push_back(velocity);
+    //     measured_velocity_pub_->publish(velocity_msg); // Publish the new velocity (0 to stop)
+    //     RCLCPP_INFO(this->get_logger(), "Published velocity %f for motor ID %ld", velocity, motor_id);
+    // }
 
     void process_norm_forces()
     {

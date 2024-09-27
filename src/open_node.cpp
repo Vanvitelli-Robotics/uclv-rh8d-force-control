@@ -13,7 +13,7 @@ class Open : public rclcpp::Node
 public:
     std::string integrator_service_name_;
     std::string proportional_service_name_;
-    std::string motor_position_topic_;
+    std::string desired_position_topic_name_;
     std::string node_service_name_;
 
     std::vector<int64_t> motor_ids_;
@@ -28,14 +28,18 @@ public:
         : Node("open_node"),
           integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "startstop")),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "activate_controller")),
-          motor_position_topic_(this->declare_parameter<std::string>("motor_position_topic", "desired_position")),
+          desired_position_topic_name_(this->declare_parameter<std::string>("desired_position_topic_name", "desired_position")),
+            // motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", {34, 35, 36, 37, 38})),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>{})),
-          motor_positions_(this->declare_parameter<std::vector<double>>("motor_positions", std::vector<double>{})),
+
+          motor_positions_(this->declare_parameter<std::vector<double>>("motor_position", std::vector<double>{})),
+        //   motor_positions_(this->declare_parameter<std::vector<int64_t>>("motor_positions", {3000, 100, 100, 100, 100})),
+
           node_service_name_(this->declare_parameter<std::string>("node_service_name", "open"))
     {
         // Create the publisher for motor positions
         motor_position_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>(
-            motor_position_topic_, 10);
+            desired_position_topic_name_, 10);
 
         start_stop_service_ = this->create_service<std_srvs::srv::SetBool>(
             node_service_name_, std::bind(&Open::service_callback, this, _1, std::placeholders::_2));
@@ -86,7 +90,7 @@ private:
             }
 
             // Publish motor positions
-            publish_initial_velocity();
+            publish_motor_position();
 
             response->success = true;
             response->message = "Motors set to specified positions, integrator and proportional stopped.";
@@ -99,20 +103,19 @@ private:
         }
     }
 
-    void publish_initial_velocity()
+    void publish_motor_position()
     {
         uclv_seed_robotics_ros_interfaces::msg::MotorPositions msg;
-
-        // Set motor IDs and initial velocity
+        RCLCPP_ERROR(this->get_logger(), "dasdfff");
         for (int64_t motor_id : motor_ids_)
         {
             msg.ids.push_back(motor_id);
-            RCLCPP_INFO(this->get_logger(), "motor id: %ld", motor_id);
+            RCLCPP_ERROR(this->get_logger(), "motor id: %ld", motor_id);
         }
         for (auto pos : motor_positions_)
         {
             msg.positions.push_back(pos);
-            RCLCPP_INFO(this->get_logger(), "position: %f", pos);
+            RCLCPP_ERROR(this->get_logger(), "position: %f", pos);
         }
 
         motor_position_pub_->publish(msg);
