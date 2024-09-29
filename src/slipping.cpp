@@ -7,17 +7,18 @@
 class SensorStateSubscriber : public rclcpp::Node
 {
 public:
-    SensorStateSubscriber()
-        : Node("sensor_state_subscriber"), node_activated_(false)
+    SlippingAvoidance()
+        : Node("slipping"), 
+            node_activated_(false)
     {
         sensor_state_subscription_ = this->create_subscription<sensor_msgs::msg::SensorState>(
-            "sensor_state", 10, std::bind(&SensorStateSubscriber::sensor_state_callback, this, std::placeholders::_1));
+            "sensor_state", 10, std::bind(&SlippingAvoidance::sensor_state_callback, this, std::placeholders::_1));
 
         desired_forces_subscription_ = this->create_subscription<std_msgs::msg::Float64MultiArray>(
-            "/cmd/desired_forces", 10, std::bind(&SensorStateSubscriber::desired_forces_callback, this, std::placeholders::_1));
+            "/cmd/desired_forces", 10, std::bind(&SlippingAvoidance::desired_forces_callback, this, std::placeholders::_1));
 
         activation_service_ = this->create_service<std_srvs::srv::Trigger>(
-            "activate_node", std::bind(&SensorStateSubscriber::activate_callback, this, std::placeholders::_1, std::placeholders::_2));
+            "activate_node", std::bind(&SlippingAvoidance::activate_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:
@@ -77,7 +78,7 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<SensorStateSubscriber>());
+    rclcpp::spin(std::make_shared<SlippingAvoidance>());
     rclcpp::shutdown();
     return 0;
 }
