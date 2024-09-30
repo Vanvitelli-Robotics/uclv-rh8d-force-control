@@ -76,6 +76,16 @@ private:
         }
     }
 
+    void initialize_vectors(const std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance::Request> request)
+    {
+        if (request->data.size() == request->ids.size()) {
+            data_vec = std::move(request->data);
+            ids_vec = std::move(request->ids);
+            RCLCPP_INFO(this->get_logger(), "Data and IDs vectors initialized successfully.");
+        } else {
+            RCLCPP_ERROR(this->get_logger(), "Data and IDs vectors have different sizes.");
+        }
+    }
 
     void activate_callback(const std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance::Request> request,
                            std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance::Response> response)
@@ -97,17 +107,14 @@ private:
                     zero_sensor_state.ids.push_back(initial_sensor_state_.ids[i]);
                     RCLCPP_INFO(this->get_logger(), "id: %d", initial_sensor_state_.ids[i]);
 
-                    vec.x = initial_sensor_state_.forces[i].x;
-                    vec.y = initial_sensor_state_.forces[i].y;
-
+                    auto vec = initial_sensor_state_.forces[i];
                     zero_sensor_state.forces.push_back(vec);
                 }
                 initial_sensor_state_ = zero_sensor_state;
             }
 
-            // Store data and ids from the service request
-            data_vec = request->data;
-            ids_vec = request->ids;
+            // Initialize data and ids vectors from the service request
+            initialize_vectors(request);
         }
     }
 
