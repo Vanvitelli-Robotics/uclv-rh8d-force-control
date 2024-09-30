@@ -41,9 +41,6 @@ public:
         sensor_state_subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             sensor_state_topic_, 10, std::bind(&SlippingAvoidance::sensor_state_callback, this, _1));
 
-        desired_norm_subscription = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            desired_norm_topic_, 10, std::bind(&SlippingAvoidance::desired_norm_callback, this, std::placeholders::_1));
-
         activation_service_trigger_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>(
             activation_service_, std::bind(&SlippingAvoidance::activate_callback, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -54,7 +51,7 @@ public:
 private:
     void sensor_state_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
-        if (node_activated_ && desired_norm_forces_received_)
+        if (node_activated_)
         {
             RCLCPP_INFO(this->get_logger(), "Node is active, processing sensor data...");
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
@@ -79,24 +76,6 @@ private:
         }
     }
 
-    void desired_norm_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
-    {
-        if (node_activated_)
-        {
-            RCLCPP_INFO(this->get_logger(), "Node is active, processing desired forces...");
-
-            for (size_t i = 0; i < msg->data.size(); ++i)
-            {
-                RCLCPP_INFO(this->get_logger(), "Desired norm ID: %u, value: %f", msg->ids[i], msg->data[i]);
-            }
-            desired_norm_forces_ = *msg;
-            desired_norm_forces_received_ = true;
-        }
-        else
-        {
-            RCLCPP_INFO(this->get_logger(), "Node is inactive. Waiting for activation...");
-        }
-    }
 
     void activate_callback(const std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance::Request> request,
                            std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance::Response> response)
