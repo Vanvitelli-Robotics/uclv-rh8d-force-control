@@ -113,17 +113,16 @@ def generate_launch_description():
                 close_node_params  # Node-specific parameters for the Close node
             ]
         ),
-        # Node(
-        #     output='screen',
-        #     package='repo_controller',
-        #     executable='slipping_avoidance',
-        #     name='slipping_avoidance',
-        #     # namespace='close',
-        #     parameters=[
-        #         common_params,  # Common parameters
-        #         slipping_avoidance_params  # Node-specific parameters for the Close node
-        #     ]
-        # ),
+         Node(
+             output='screen',
+             package='repo_controller',
+             executable='slipping_avoidance',
+             name='slipping_avoidance',
+             # namespace='close',
+             parameters=[
+                 slipping_avoidance_params  # Node-specific parameters for the Close node
+             ]
+        ),
         Node(
             output='screen',
             package='uclv_seed_robotics_ros',
