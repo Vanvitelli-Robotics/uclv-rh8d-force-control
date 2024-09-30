@@ -48,6 +48,13 @@ def generate_launch_description():
         "proportional_service_name": "activate_controller"  # Proportional controller service
     }
 
+    slipping_avoidance_params = {
+        "coefficient": 0.01,
+        "sensor_state_topic": "sensor_state",
+        "activation_service": "slipping",
+        "desired_norm_topic": "/cmd/desdesired_norm_forces"
+    }
+
     return LaunchDescription([
         Node(
             output='screen',
@@ -106,6 +113,17 @@ def generate_launch_description():
                 close_node_params  # Node-specific parameters for the Close node
             ]
         ),
+        # Node(
+        #     output='screen',
+        #     package='repo_controller',
+        #     executable='slipping_avoidance',
+        #     name='slipping_avoidance',
+        #     # namespace='close',
+        #     parameters=[
+        #         common_params,  # Common parameters
+        #         slipping_avoidance_params  # Node-specific parameters for the Close node
+        #     ]
+        # ),
         Node(
             output='screen',
             package='uclv_seed_robotics_ros',

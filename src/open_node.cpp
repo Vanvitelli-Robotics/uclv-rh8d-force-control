@@ -27,13 +27,11 @@ public:
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr proportional_client_;
     rclcpp::Client<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors>::SharedPtr calibrate_client_;
 
-
-
     Open()
         : Node("open_node"),
           integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "startstop")),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "activate_controller")),
-        calibrate_client_name_(this->declare_parameter<std::string>("calibrate_client_name", "calibrate")),
+          calibrate_client_name_(this->declare_parameter<std::string>("calibrate_client_name", "calibrate")),
 
           desired_position_topic_name_(this->declare_parameter<std::string>("desired_position_topic_name", "desired_position")),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>{})),
@@ -51,7 +49,6 @@ public:
         integrator_client_ = this->create_client<std_srvs::srv::SetBool>(integrator_service_name_);
         proportional_client_ = this->create_client<std_srvs::srv::SetBool>(proportional_service_name_);
         calibrate_client_ = this->create_client<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors>("/calibrate");
-
     }
 
 private:
@@ -128,10 +125,10 @@ private:
         motor_position_pub_->publish(msg);
     }
 
-
-    void calibrate() {
+    void calibrate()
+    {
         auto request = std::make_shared<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors::Request>();
-        
+
         auto result = calibrate_client_->async_send_request(request);
         RCLCPP_INFO(this->get_logger(), "Calibrate ok.");
     }

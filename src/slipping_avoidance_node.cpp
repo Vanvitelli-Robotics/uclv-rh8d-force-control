@@ -1,0 +1,149 @@
+#include "rclcpp/rclcpp.hpp"
+#include "std_srvs/srv/trigger.hpp"
+#include "rclcpp/wait_for_message.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/fts3_sensors.hpp"
+#include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
+#include "uclv_seed_robotics_ros_interfaces/srv/slipping_avoidance.hpp"
+
+using std::placeholders::_1;
+
+class SlippingAvoidance : public rclcpp::Node
+{
+public:
+    geometry_msgs::msg::Vector3 vec;
+
+    double coefficient_;
+    std::string sensor_state_topic_;
+    std::string desired_forces_topic_;
+    std::string activation_service_;
+    std::string desired_norm_topic_;
+
+    uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors initial_sensor_state_; // Current motor positions
+    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;
+
+    bool desired_norm_forces_received_ = false;
+
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr sensor_state_subscription_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_subscription;
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_publisher_;
+
+    rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>::SharedPtr activation_service_trigger_;
+
+    SlippingAvoidance()
+        : Node("slipping_avoidance"),
+          node_activated_(false),
+          coefficient_(this->declare_parameter<double>("coefficient", 0.01)),
+          sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
+          activation_service_(this->declare_parameter<std::string>("activation_service", "slipping")),
+          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces"))
+    {
+
+        sensor_state_subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
+            sensor_state_topic_, 10, std::bind(&SlippingAvoidance::sensor_state_callback, this, _1));
+
+        desired_norm_subscription = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
+            desired_norm_topic_, 10, std::bind(&SlippingAvoidance::desired_norm_callback, this, std::placeholders::_1));
+
+        activation_service_trigger_ = this->create_service<std_srvs::srv::Trigger>(
+            activation_service_, std::bind(&SlippingAvoidance::activate_callback, this, std::placeholders::_1, std::placeholders::_2));
+
+        desired_norm_publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
+            desired_norm_topic_, 10);
+    }
+
+private:
+    void sensor_state_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
+    {
+        // ogni volta che arriva una forza  misurata
+        // faccio f-f0
+        // moltiplico per un guadagno k
+        // e poi sommo a cmd/norm_forces
+        if (node_activated_ && desired_norm_forces_received_)
+        {
+            RCLCPP_INFO(this->get_logger(), "Node is active, processing sensor data...");
+            uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
+            for (size_t i = 0; i < msg->forces.size(); ++i)
+            {
+                double x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
+                double y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
+
+                double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2)))/1000.0;
+                double cmd = coefficient_ * abs;
+                RCLCPP_INFO(this->get_logger(), "cmd: %f", cmd);
+
+                newcmd.ids.push_back(msg->ids[i]);
+                newcmd.data.push_back(desired_norm_forces_.data[i] + cmd);
+            }
+
+            desired_norm_publisher_->publish(newcmd);
+        }
+        else
+        {
+            RCLCPP_INFO(this->get_logger(), "Node is inactive. Waiting for activation...");
+        }
+    }
+
+    void desired_norm_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
+    {
+        if (node_activated_)
+        {
+            RCLCPP_INFO(this->get_logger(), "Node is active, processing desired forces...");
+
+            for (size_t i = 0; i < msg->data.size(); ++i)
+            {
+                RCLCPP_INFO(this->get_logger(), "Desired norm ID: %u, value: %f", msg->ids[i], msg->data[i]);
+            }
+            desired_norm_forces_ = *msg;
+            desired_norm_forces_received_ = true;
+        }
+        else
+        {
+            RCLCPP_INFO(this->get_logger(), "Node is inactive. Waiting for activation...");
+        }
+    }
+
+    void activate_callback(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+                           std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+    {
+        node_activated_ = !node_activated_;
+        response->success = true;
+        response->message = node_activated_ ? "Node activated!" : "Node deactivated!";
+        RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
+        // mi devo prendere la f0
+        if (node_activated_)
+        {
+            // wait for initial forces
+            if (rclcpp::wait_for_message<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
+                    initial_sensor_state_, this->shared_from_this(), "sensor_state", std::chrono::seconds(1)))
+            {
+                uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors zero_sensor_state;
+                for (size_t i = 0; i < initial_sensor_state_.forces.size(); i++)
+                {
+                    zero_sensor_state.ids.push_back(initial_sensor_state_.ids[i]);
+                    RCLCPP_INFO(this->get_logger(), "id: %d", initial_sensor_state_.ids[i]);
+
+                    vec.x = initial_sensor_state_.forces[i].x;
+                    vec.y = initial_sensor_state_.forces[i].y;
+
+                    zero_sensor_state.forces.push_back(vec);
+
+                    // RCLCPP_INFO(this->get_logger(), "id: %d, x: %f, y: %f, z: %f", initial_sensor_state_.ids[i],
+                    //             initial_sensor_state_.forces[i].x,
+                    //             initial_sensor_state_.forces[i].y,
+                    //             initial_sensor_state_.forces[i].z);
+                }
+                initial_sensor_state_ = zero_sensor_state;
+            }
+        }
+    }
+
+    bool node_activated_;
+};
+
+int main(int argc, char *argv[])
+{
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<SlippingAvoidance>());
+    rclcpp::shutdown();
+    return 0;
+}

@@ -52,12 +52,21 @@ ament_target_dependencies(
 )
 
 
+add_executable(slipping_avoidance src/slipping_avoidance_node.cpp)
+ament_target_dependencies(
+  slipping_avoidance
+  "rclcpp"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
+)
+
 install(TARGETS 
       euler_integrator_controller
       proportional_controller
       force_norm
       close
       open
+      slipping_avoidance
       DESTINATION 
         lib/${PROJECT_NAME})
 
