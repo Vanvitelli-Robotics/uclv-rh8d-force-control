@@ -2,6 +2,7 @@
 #include "std_srvs/srv/set_bool.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/motor_positions.hpp"
+#include "uclv_seed_robotics_ros_interfaces/srv/calibrate_sensors.hpp"
 
 #include <memory>
 #include <vector>
@@ -13,6 +14,7 @@ class Open : public rclcpp::Node
 public:
     std::string integrator_service_name_;
     std::string proportional_service_name_;
+    std::string calibrate_client_name_;
     std::string desired_position_topic_name_;
     std::string node_service_name_;
 
@@ -23,18 +25,19 @@ public:
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::MotorPositions>::SharedPtr motor_position_pub_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr integrator_client_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr proportional_client_;
+    rclcpp::Client<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors>::SharedPtr calibrate_client_;
+
+
 
     Open()
         : Node("open_node"),
           integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "startstop")),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "activate_controller")),
+        calibrate_client_name_(this->declare_parameter<std::string>("calibrate_client_name", "calibrate")),
+
           desired_position_topic_name_(this->declare_parameter<std::string>("desired_position_topic_name", "desired_position")),
-            // motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", {34, 35, 36, 37, 38})),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>{})),
-
           motor_positions_(this->declare_parameter<std::vector<double>>("motor_position", std::vector<double>{})),
-        //   motor_positions_(this->declare_parameter<std::vector<int64_t>>("motor_positions", {3000, 100, 100, 100, 100})),
-
           node_service_name_(this->declare_parameter<std::string>("node_service_name", "open"))
     {
         // Create the publisher for motor positions
@@ -47,6 +50,8 @@ public:
         // Clients for integrator and proportional controller
         integrator_client_ = this->create_client<std_srvs::srv::SetBool>(integrator_service_name_);
         proportional_client_ = this->create_client<std_srvs::srv::SetBool>(proportional_service_name_);
+        calibrate_client_ = this->create_client<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors>("/calibrate");
+
     }
 
 private:
@@ -92,6 +97,8 @@ private:
             // Publish motor positions
             publish_motor_position();
 
+            // Calibrate
+
             response->success = true;
             response->message = "Motors set to specified positions, integrator and proportional stopped.";
         }
@@ -119,6 +126,14 @@ private:
         }
 
         motor_position_pub_->publish(msg);
+    }
+
+
+    void calibrate() {
+        auto request = std::make_shared<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors::Request>();
+        
+        auto result = calibrate_client_->async_send_request(request);
+        RCLCPP_INFO(this->get_logger(), "Calibrate ok.");
     }
 };
 
