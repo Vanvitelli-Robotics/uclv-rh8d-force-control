@@ -1,7 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/set_gain.hpp"
-#include "std_srvs/srv/set_bool.hpp" // Servizio per attivare/disattivare il controller
+#include "std_srvs/srv/set_bool.hpp"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -231,7 +231,7 @@ private:
         measured_velocity_pub_->publish(velocity_msg);
 
         // Reset the flags for receiving new data
-        desired_norm_forces_received_ = false;
+        // desired_norm_forces_received_ = false;
         measured_norm_forces_received_ = false;
     }
 

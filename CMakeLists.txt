@@ -60,6 +60,15 @@ ament_target_dependencies(
   "std_srvs"
 )
 
+
+add_executable(task_node src/task_node.cpp)
+ament_target_dependencies(
+  task_node
+  "rclcpp"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
+)
+
 install(TARGETS 
       euler_integrator_controller
       proportional_controller
@@ -67,6 +76,7 @@ install(TARGETS
       close
       open
       slipping_avoidance
+      task_node
       DESTINATION 
         lib/${PROJECT_NAME})
 

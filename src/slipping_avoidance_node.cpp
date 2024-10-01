@@ -16,7 +16,7 @@ public:
     std::string desired_norm_topic_;
 
     std::vector<double> data_vec;
-    std::vector<int64_t> ids_vec;
+    std::vector<uint16_t> ids_vec;
 
     uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors initial_sensor_state_;
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;
@@ -32,7 +32,7 @@ public:
     SlippingAvoidance()
         : Node("slipping_avoidance"),
           node_activated_(false),
-          coefficient_(this->declare_parameter<double>("coefficient", 0.01)),
+          coefficient_(this->declare_parameter<double>("coefficient", 1.25)),
           sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
           activation_service_(this->declare_parameter<std::string>("activation_service", "slipping")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces"))
@@ -72,7 +72,8 @@ private:
         }
         else
         {
-            RCLCPP_INFO(this->get_logger(), "Node is inactive. Waiting for activation...");
+            RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Node is inactive. Waiting for activation...");
+            // RCLCPP_INFO(this->get_logger(), "Node is inactive. Waiting for activation...");
         }
     }
 
@@ -81,6 +82,7 @@ private:
         if (request->data.size() == request->ids.size()) {
             data_vec = std::move(request->data);
             ids_vec = std::move(request->ids);
+        
             RCLCPP_INFO(this->get_logger(), "Data and IDs vectors initialized successfully.");
         } else {
             RCLCPP_ERROR(this->get_logger(), "Data and IDs vectors have different sizes.");
