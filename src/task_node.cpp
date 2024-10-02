@@ -9,6 +9,11 @@ using std::placeholders::_2;
 class TaskNode : public rclcpp::Node
 {
 public:
+
+std::vector<double> desired_norm_data_;
+std::vector<uint16_t> desired_norm_ids_;
+
+
     TaskNode() : Node("task_node")
     {
         desired_norm_publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
@@ -18,8 +23,8 @@ public:
         slipping_client_ = this->create_client<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>("/slipping");
         open_client_ = this->create_client<std_srvs::srv::SetBool>("/open");
 
-        this->declare_parameter<std::vector<double>>("desired_norm_data", {0.3, 0.3, 0.3, 0.3, 0.3});
-        this->declare_parameter<std::vector<uint16_t>>("desired_norm_ids", {0, 1, 2, 3, 4});
+        desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.3, 0.3, 0.3, 0.3, 0.3}));
+        desired_norm_ids_(this->declare_parameter<std::vector<uint16_t>>("desired_norm_ids", {0, 1, 2, 3, 4}));
     }
 
     void run() {
