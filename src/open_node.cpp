@@ -95,7 +95,8 @@ private:
             publish_motor_position();
 
             // Calibrate
-
+            calibrate();
+            
             response->success = true;
             response->message = "Motors set to specified positions, integrator and proportional stopped.";
         }

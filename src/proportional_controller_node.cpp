@@ -89,6 +89,7 @@ private:
     {
         controller_activated_ = request->data;
         response->success = true;
+        measured_norm_forces_received_ = false;
         response->message = controller_activated_ ? "Controller activated" : "Controller deactivated";
         RCLCPP_INFO(this->get_logger(), response->message.c_str());
     }
@@ -109,13 +110,14 @@ private:
     // Callback function for receiving desired normalized forces
     void desired_norm_forces_callback(const uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped::SharedPtr msg)
     {
-        if (!controller_activated_)
-        {
-            RCLCPP_WARN(this->get_logger(), "Controller is not activated. Waiting for activation...");
-            return;
-        }
         desired_norm_forces_ = *msg;
         desired_norm_forces_received_ = true;
+        if (!controller_activated_)
+        {
+            //RCLCPP_WARN(this->get_logger(), "Controller is not activated. Waiting for activation...");
+            return;
+        }
+        
         compute_and_publish_error();
     }
 

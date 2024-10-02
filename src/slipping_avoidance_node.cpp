@@ -61,7 +61,7 @@ private:
                 double y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
 
                 double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
-                double cmd = coefficient_ * abs;
+                double cmd = coefficient_ * abs; // qui dai un coefficiente per ogni dito
                 RCLCPP_INFO(this->get_logger(), "cmd: %f", cmd);
 
                 newcmd.ids.push_back(ids_vec[i]);
