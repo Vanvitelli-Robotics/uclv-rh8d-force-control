@@ -9,7 +9,7 @@ using std::placeholders::_1;
 class SlippingAvoidance : public rclcpp::Node
 {
 public:
-    double coefficient_;
+    std::vector<double> coefficients_;  // Vettore di coefficienti
     std::string sensor_state_topic_;
     std::string desired_forces_topic_;
     std::string activation_service_;
@@ -22,6 +22,7 @@ public:
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;
 
     bool desired_norm_forces_received_ = false;
+    bool node_activated_ = false;
 
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr sensor_state_subscription_;
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_subscription;
@@ -31,13 +32,11 @@ public:
 
     SlippingAvoidance()
         : Node("slipping_avoidance"),
-          node_activated_(false),
-          coefficient_(this->declare_parameter<double>("coefficient", 1.25)),
+          coefficients_(this->declare_parameter<std::vector<double>>("coefficients", {1.25})), // Parametro vettore modificabile
           sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
           activation_service_(this->declare_parameter<std::string>("activation_service", "slipping")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces"))
     {
-
         sensor_state_subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             sensor_state_topic_, 10, std::bind(&SlippingAvoidance::sensor_state_callback, this, _1));
 
@@ -55,13 +54,14 @@ private:
         {
             RCLCPP_INFO(this->get_logger(), "Node is active, processing sensor data...");
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
+
             for (size_t i = 0; i < msg->forces.size(); ++i)
             {
                 double x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
                 double y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
 
                 double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
-                double cmd = coefficient_ * abs; // qui dai un coefficiente per ogni dito
+                double cmd = coefficients_[i] * abs; // Usa il coefficiente corrispondente per ogni dito
                 RCLCPP_INFO(this->get_logger(), "cmd: %f", cmd);
 
                 newcmd.ids.push_back(ids_vec[i]);
@@ -73,7 +73,6 @@ private:
         else
         {
             RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Node is inactive. Waiting for activation...");
-            // RCLCPP_INFO(this->get_logger(), "Node is inactive. Waiting for activation...");
         }
     }
 
@@ -119,8 +118,6 @@ private:
             initialize_vectors(request);
         }
     }
-
-    bool node_activated_;
 };
 
 int main(int argc, char *argv[])
