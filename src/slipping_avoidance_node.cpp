@@ -56,17 +56,27 @@ private:
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
 
             for (size_t i = 0; i < msg->forces.size(); ++i)
-            {
-                double x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
-                double y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
+{
+    newcmd.ids.push_back(ids_vec[i]);  // Aggiungi sempre l'ID del sensore
+    
+    if (coefficients_[i] == 0)
+    {
+        RCLCPP_INFO(this->get_logger(), "Skipping sensor %d due to zero coefficient", ids_vec[i]);
+        newcmd.data.push_back(data_vec[i]);  // Mantieni il comando invariato
+        continue; // Passa al sensore successivo
+    }
 
-                double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
-                double cmd = coefficients_[i] * abs; // Usa il coefficiente corrispondente per ogni dito
-                RCLCPP_INFO(this->get_logger(), "cmd: %f", cmd);
+    // Calcola il comando solo per i sensori con coefficienti diversi da zero
+    double x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
+    double y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
 
-                newcmd.ids.push_back(ids_vec[i]);
-                newcmd.data.push_back(data_vec[i] + cmd);
-            }
+    double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
+    double cmd = coefficients_[i] * abs;
+    RCLCPP_INFO(this->get_logger(), "cmd: %f", cmd);
+
+    newcmd.data.push_back(data_vec[i] + cmd);
+}
+
 
             desired_norm_publisher_->publish(newcmd);
         }
