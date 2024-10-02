@@ -2,7 +2,7 @@
 # TaskNode - ROS2 Node
 
 ## Description
-The **TaskNode** is a ROS2 node designed to execute a sequence of operations that involve publishing desired normal forces and calling various services. This node is particularly useful for controlling motors or actuators that use normal forces to avoid slippage or similar operations.
+This ROS2 node is designed to execute a sequence of operations that involve publishing desired normal forces and calling various services. This node is particularly useful for controlling motors or actuators that use normal forces to avoid slippage or similar operations.
 
 ## Operation
 ### Sequence of Operations
