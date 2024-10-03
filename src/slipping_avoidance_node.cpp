@@ -9,7 +9,12 @@ using std::placeholders::_1;
 class SlippingAvoidance : public rclcpp::Node
 {
 public:
-    std::vector<double> coefficients_;  // Vettore di coefficienti
+    std::vector<double> coefficients_;
+    double coeffiecient_;
+
+    double x;
+    double y;
+
     std::string sensor_state_topic_;
     std::string desired_forces_topic_;
     std::string activation_service_;
@@ -32,7 +37,7 @@ public:
 
     SlippingAvoidance()
         : Node("slipping_avoidance"),
-          coefficients_(this->declare_parameter<std::vector<double>>("coefficients", {1.25})), // Parametro vettore modificabile
+          coefficients_(this->declare_parameter<std::vector<double>>("coefficients", {0, 1.25, 0, 0, 0})),
           sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
           activation_service_(this->declare_parameter<std::string>("activation_service", "slipping")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces"))
@@ -56,27 +61,22 @@ private:
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
 
             for (size_t i = 0; i < msg->forces.size(); ++i)
-{
-    newcmd.ids.push_back(ids_vec[i]);  // Aggiungi sempre l'ID del sensore
-    
-    if (coefficients_[i] == 0)
-    {
-        RCLCPP_INFO(this->get_logger(), "Skipping sensor %d due to zero coefficient", ids_vec[i]);
-        newcmd.data.push_back(data_vec[i]);  // Mantieni il comando invariato
-        continue; // Passa al sensore successivo
-    }
+            {
+                newcmd.ids.push_back(ids_vec[i]);
 
-    // Calcola il comando solo per i sensori con coefficienti diversi da zero
-    double x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
-    double y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
+                if (coefficients_[i] != 0)
+                {
+                    coeffiecient_ = coefficients_[i];
+                    x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
+                    y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
+                }
 
-    double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
-    double cmd = coefficients_[i] * abs;
-    RCLCPP_INFO(this->get_logger(), "cmd: %f", cmd);
 
-    newcmd.data.push_back(data_vec[i] + cmd);
-}
+                double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
+                double cmd = coeffiecient_ * abs;
 
+                newcmd.data.push_back(data_vec[i] + cmd);
+            }
 
             desired_norm_publisher_->publish(newcmd);
         }
@@ -88,12 +88,15 @@ private:
 
     void initialize_vectors(const std::shared_ptr<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance::Request> request)
     {
-        if (request->data.size() == request->ids.size()) {
+        if (request->data.size() == request->ids.size())
+        {
             data_vec = std::move(request->data);
             ids_vec = std::move(request->ids);
-        
+
             RCLCPP_INFO(this->get_logger(), "Data and IDs vectors initialized successfully.");
-        } else {
+        }
+        else
+        {
             RCLCPP_ERROR(this->get_logger(), "Data and IDs vectors have different sizes.");
         }
     }

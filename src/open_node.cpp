@@ -94,6 +94,8 @@ private:
             // Publish motor positions
             publish_motor_position();
 
+            std::this_thread::sleep_for(std::chrono::seconds{2});
+            
             // Calibrate
             calibrate();
             

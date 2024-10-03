@@ -5,7 +5,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Common parameters for all nodes
     common_params = {
-        "motor_ids": [36, 37, 38],  # Motor IDs used by both controllers
+        "motor_ids": [34, 35, 36, 37],  # Motor IDs used by both controllers
         "measured_velocity_topic": "measured_velocity",  # Topic for proportional result
     }
 
@@ -49,10 +49,10 @@ def generate_launch_description():
     }
 
     slipping_avoidance_params = {
-        "coefficient": 2.0,
+        "coefficients": [0, 1.75, 0, 0, 0],
         "sensor_state_topic": "sensor_state",
         "activation_service": "slipping",
-        "desired_norm_topic": "/cmd/desired_norm_forces"
+        "desired_norm_topic": "/cmd/desired_norm_forces",
     }
 
     return LaunchDescription([
@@ -97,8 +97,8 @@ def generate_launch_description():
             name='open_node',
             parameters=[
                 # # common_params,
-                {"motor_position":[100.0, 100.0, 100.0]},
-                {"motor_ids": [36, 37, 38]},
+                {"motor_position":[3000.0, 100.0, 100.0, 100.0, 100.0]},
+                {"motor_ids": [34, 35, 36, 37, 38]},
                 {"desired_position_topic_name": "desired_position"}
             ]
         ),
