@@ -54,7 +54,8 @@
 
 1. **Activation**: When the node is activated via the service, it starts listening to the `measured_norm_topic` for normalized force data. It then checks whether the forces corresponding to the sensor IDs mapped to each motor exceed the threshold. If the forces are below the threshold, the node publishes motor velocities to `measured_velocity_topic`.
 
-2. **Deactivation**: When the node is deactivated via the service, it stops listening to the force data and activates the proportional controller using the `proportional_service_name`. This enables the proportional controller to take control of the motors.
+2. **Deactivation**: When the node is deactivated via the service, it stops the integrator controller using the `integrator_service_name`. When the node is deactivated via check of thresholds, it also active the `proportional_service_name`.
+
 
 3. **Force Threshold Handling**: 
    - The node maps motors to sensor IDs via the parameter `motor_sensor_mappings`.
@@ -81,15 +82,15 @@ def generate_launch_description():
             executable='close_node',
             name='close_node',
             parameters=[
-                {'measured_norm_topic': '/sensor_state'},
-                {'measured_velocity_topic': '/desired_velocity'},
-                {'motor_ids': [35, 36, 37]},
-                {'threshold': 1.5},
-                {'initial_velocity': 0.3},
-                {'motor_sensor_mappings': ['35: 101, 102', '36: 103, 104', '37: 105, 106']},
-                {'node_service_name': '/close_node_service'},
-                {'proportional_service_name': '/proportional_controller_service'},
-                {'integrator_service_name': '/integrator_service'}
+                {"measured_norm_topic": "/sensor_state"},
+                {"measured_velocity_topic": "/desired_velocity"},
+                {"motor_ids": [35, 36, 37]},
+                {"threshold': 0.1},
+                {"initial_velocity": 300},
+                {"motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"]},
+                {"node_service_name": "/close_node_service"},
+                {"proportional_service_name': "/proportional_controller_service"},
+                {"integrator_service_name': "/integrator_controller_service"}
             ]
         )
     ])
