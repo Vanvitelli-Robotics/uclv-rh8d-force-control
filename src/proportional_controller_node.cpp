@@ -18,7 +18,7 @@ public:
     std::string desired_norm_topic_;      // Name of the topic for desired normalized forces
     std::string measured_velocity_topic_; // Name of the topic for publishing errors
     std::string set_gain_service_name_;   // Name of the service to set gain
-    std::string node_service_name_; // Name of the service to activate the controller
+    std::string proportional_service_name_; // Name of the service to activate the controller
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped measured_norm_forces_; // Message for measured normalized forces
@@ -43,20 +43,20 @@ public:
     rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr set_gain_service_;
 
     // Service to activate the controller
-    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr activate_controller_service_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr node_service_;
 
     // Constructor for initializing the node
     ProportionalController()
         : Node("proportional_controller"),
-          gain_(this->declare_parameter<double>("gain", 1.0)),
+          gain_(this->declare_parameter<double>("gain", 0.0)),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
           motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
           sensor_weight_mappings_(this->declare_parameter<std::vector<std::string>>("sensor_weight_mappings", std::vector<std::string>())),
-          measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces")),
-          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces")),
-          measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "measured_velocity")),
-          set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", "set_gain")),
-          node_service_name_(this->declare_parameter<std::string>("node_service_name", "activate_controller"))
+          measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", std::string())),
+          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", std::string())),
+          measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", std::string())),
+          set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", std::string())),
+          proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", std::string()))
     {
         // Initialize mappings
         initialize_motor_to_sensor_map();
@@ -79,11 +79,54 @@ public:
             set_gain_service_name_, std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         // Create service to activate the controller
-        activate_controller_service_ = this->create_service<std_srvs::srv::SetBool>(
+        node_service_ = this->create_service<std_srvs::srv::SetBool>(
             node_service_name_, std::bind(&ProportionalController::activate_controller_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:
+
+void check_parameters()
+{
+    auto check_string_parameter = [this](const std::string &param_name, const std::string &value) {
+        if (value.empty())
+        {
+            RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid value.", param_name.c_str());
+            rclcpp::shutdown();
+            throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+        }
+    };
+
+    auto check_vector_parameter = [this](const std::string &param_name, const std::vector<double> &value) {
+        if (value.empty())
+        {
+            RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
+            rclcpp::shutdown();
+            throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+        }
+    };
+
+    auto check_double_parameter = [this](const std::string &param_name, double value) {
+        if (value == 0.0)  // Adjust this condition based on your validation needs
+        {
+            RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or set to an invalid value. Please provide a valid double value.", param_name.c_str());
+            rclcpp::shutdown();
+            throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+        }
+    };
+
+    check_string_parameter("measured_norm_topic_",measured_norm_topic);
+    check_string_parameter("desired_norm_topic_",desired_norm_topic);
+    check_string_parameter("measured_velocity_topic_", measured_velocity_topic);
+    check_string_parameter("set_gain_service_name_", set_gain_service_name);
+    check_string_parameter("proportional_service_name_", proportional_service_name);
+    check_vector_parameter("sensor_weight_mappings_", sensor_weight_mappings);
+    check_vector_parameter("motor_sensor_mappings_", motor_sensor_mappings);
+    check_vector_parameter("motor_ids_", motor_ids);
+    check_double_parameter("gain_", gain);
+
+
+}
+
     void activate_controller_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                                       std::shared_ptr<std_srvs::srv::SetBool::Response> response)
     {
