@@ -44,7 +44,7 @@ public:
           sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "")),
           activation_service_(this->declare_parameter<std::string>("activation_service", "")),
           desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "")),
-          difference_topic_(this->declare_parameter<std::string>("difference_topic", "/force_difference"))  // Initialize difference topic
+          difference_topic_(this->declare_parameter<std::string>("difference_topic", ""))
     {
         check_parameters();
 
