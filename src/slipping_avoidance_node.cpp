@@ -10,7 +10,7 @@ class SlippingAvoidance : public rclcpp::Node
 {
 public:
     std::vector<double> coefficients_;
-    double coeffiecient_;
+    double coefficient_;
 
     double x;
     double y;
@@ -37,11 +37,14 @@ public:
 
     SlippingAvoidance()
         : Node("slipping_avoidance"),
-          coefficients_(this->declare_parameter<std::vector<double>>("coefficients", {0, 1.25, 0, 0, 0})),
-          sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
-          activation_service_(this->declare_parameter<std::string>("activation_service", "slipping")),
-          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "/cmd/desired_norm_forces"))
+          coefficients_(this->declare_parameter<std::vector<double>>("coefficients", std::vector<double>())),
+          sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "")),
+          activation_service_(this->declare_parameter<std::string>("activation_service", "")),
+          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", ""))
     {
+
+        check_parameters();
+
         sensor_state_subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             sensor_state_topic_, 10, std::bind(&SlippingAvoidance::sensor_state_callback, this, _1));
 
@@ -53,11 +56,39 @@ public:
     }
 
 private:
+
+    void check_parameters()
+{
+    auto check_string_parameter = [this](const std::string &param_name, const std::string &value) {
+        if (value.empty())
+        {
+            RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid value.", param_name.c_str());
+            rclcpp::shutdown();
+            throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+        }
+    };
+
+    auto check_vector_parameter = [this](const std::string &param_name, const std::vector<double> &value) {
+        if (value.empty())
+        {
+            RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
+            rclcpp::shutdown();
+            throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+        }
+    };
+
+    check_vector_parameter("coefficients", coefficients_);
+    check_string_parameter("sensor_state_topic", sensor_state_topic_);
+    check_string_parameter("activation_service", activation_service_);
+    check_string_parameter("desired_norm_topic", desired_norm_topic_);
+
+    RCLCPP_INFO(this->get_logger(), "All required parameters are set correctly.");
+}
+
     void sensor_state_callback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
         if (node_activated_)
         {
-            RCLCPP_INFO(this->get_logger(), "Node is active, processing sensor data...");
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
 
             for (size_t i = 0; i < msg->forces.size(); ++i)
@@ -71,7 +102,6 @@ private:
                     y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
                 }
 
-
                 double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
                 double cmd = coeffiecient_ * abs;
 
@@ -79,10 +109,6 @@ private:
             }
 
             desired_norm_publisher_->publish(newcmd);
-        }
-        else
-        {
-            RCLCPP_INFO_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Node is inactive. Waiting for activation...");
         }
     }
 
@@ -92,12 +118,6 @@ private:
         {
             data_vec = std::move(request->data);
             ids_vec = std::move(request->ids);
-
-            RCLCPP_INFO(this->get_logger(), "Data and IDs vectors initialized successfully.");
-        }
-        else
-        {
-            RCLCPP_ERROR(this->get_logger(), "Data and IDs vectors have different sizes.");
         }
     }
 
@@ -111,15 +131,13 @@ private:
 
         if (node_activated_)
         {
-            // Wait for initial forces
             if (rclcpp::wait_for_message<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
-                    initial_sensor_state_, this->shared_from_this(), "sensor_state", std::chrono::seconds(1)))
+                    initial_sensor_state_, this->shared_from_this(), sensor_state_topic_, std::chrono::seconds(1)))
             {
                 uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors zero_sensor_state;
                 for (size_t i = 0; i < initial_sensor_state_.forces.size(); i++)
                 {
                     zero_sensor_state.ids.push_back(initial_sensor_state_.ids[i]);
-                    RCLCPP_INFO(this->get_logger(), "id: %d", initial_sensor_state_.ids[i]);
 
                     auto vec = initial_sensor_state_.forces[i];
                     zero_sensor_state.forces.push_back(vec);
@@ -127,7 +145,6 @@ private:
                 initial_sensor_state_ = zero_sensor_state;
             }
 
-            // Initialize data and ids vectors from the service request
             initialize_vectors(request);
         }
     }
@@ -136,7 +153,19 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<SlippingAvoidance>());
+
+    try
+    {
+        auto slipping_avoidance_node = std::make_shared<SlippingAvoidance>();
+        rclcpp::spin(slipping_avoidance_node);
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Exception caught: %s", e.what());
+        rclcpp::shutdown();
+        return 1;
+    }
+
     rclcpp::shutdown();
     return 0;
 }
