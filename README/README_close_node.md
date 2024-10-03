@@ -85,7 +85,7 @@ def generate_launch_description():
                 {"measured_norm_topic": "/sensor_state"},
                 {"measured_velocity_topic": "/desired_velocity"},
                 {"motor_ids": [35, 36, 37]},
-                {"threshold': 0.1},
+                {"threshold": 0.1},
                 {"initial_velocity": 300},
                 {"motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"]},
                 {"node_service_name": "/close_node_service"},
