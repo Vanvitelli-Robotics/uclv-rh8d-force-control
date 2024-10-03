@@ -34,7 +34,7 @@ public:
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr sensor_state_subscription_;
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_subscription;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_publisher_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr difference_publisher_;  // New publisher
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr difference_publisher_;
 
     rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>::SharedPtr activation_service_trigger_;
 
