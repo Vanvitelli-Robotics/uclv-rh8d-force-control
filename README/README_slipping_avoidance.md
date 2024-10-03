@@ -1,7 +1,7 @@
 
 # Slipping Avoidance Node
 
-Provides a slipping avoidance mechanism by subscribing to force sensor data and applying a set of coefficients to calculate new force commands. The node can be activated or deactivated using a service call. When activated, the node adjusts the desired forces by calculating deviations from the initial sensor state and applying predefined coefficients.
+This node provides a slipping avoidance mechanism by subscribing to force sensor data and applying a set of coefficients to calculate new force commands. The node can be activated or deactivated using a service call. When activated, the node adjusts the desired forces by calculating deviations from the initial sensor state and applying predefined coefficients.
 
 ## Overview
 
@@ -11,6 +11,9 @@ Provides a slipping avoidance mechanism by subscribing to force sensor data and 
   
 - **`desired_norm_topic`** (uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped): 
   Publishes the calculated desired force values with their respective IDs.
+
+- **`difference_topic`** (`geometry_msgs/msg/Vector3Stamped`): 
+  Publishes the difference in x and y components of the forces, calculated as deviations from the initial sensor state.
 
 ### Services:
 - **`activation_service`** (uclv_seed_robotics_ros_interfaces/srv/SlippingAvoidance): 
@@ -29,6 +32,9 @@ Provides a slipping avoidance mechanism by subscribing to force sensor data and 
 - **`desired_norm_topic`** (`std::string`): 
   The topic name to which the calculated desired norm forces are published.
 
+- **`difference_topic`** (`std::string`): 
+  The topic name where the difference in x and y components will be published.
+
 ## Node Behavior
 
 ### Activation:
@@ -42,7 +48,8 @@ Provides a slipping avoidance mechanism by subscribing to force sensor data and 
 
 - **sensor_state_callback**: 
   - Processes the current force sensor data when the node is activated, calculates force deviations from the initial state, and publishes the adjusted forces.
-  
+  - Publishes the difference between the x and y components of the forces on the `difference_topic`.
+
 - **initialize_vectors**: 
   - Initializes the `data_vec` and `ids_vec` vectors with values from the service request.
   
@@ -54,6 +61,7 @@ Provides a slipping avoidance mechanism by subscribing to force sensor data and 
 1. Set the necessary parameters:
    - `sensor_state_topic`: The topic for sensor state data.
    - `desired_norm_topic`: The topic where adjusted forces will be published.
+   - `difference_topic`: The topic where the difference in forces will be published.
    - `coefficients`: The set of coefficients to apply to the force deviations.
    
 2. Call the activation service to start the node:
@@ -61,7 +69,7 @@ Provides a slipping avoidance mechanism by subscribing to force sensor data and 
    ros2 service call /activate_slipping_avoidance uclv_seed_robotics_ros_interfaces/srv/SlippingAvoidance
    ```
 
-3. The node will begin processing force data and publishing adjusted forces when activated.
+3. The node will begin processing force data and publishing adjusted forces and force differences when activated.
 4. To stop the node, call the activation service again to deactivate it.
 
 ## Error Handling
