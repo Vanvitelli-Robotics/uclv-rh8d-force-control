@@ -175,16 +175,13 @@ private:
             service_close_actived_ = false;
 
             
-            if (!proportional_service_client_->wait_for_service(std::chrono::seconds(1)))
+            if (!integrator_service_client_->wait_for_service(std::chrono::seconds(1)))
             {
-                RCLCPP_ERROR(this->get_logger(), "Proportional controller service not available after waiting.");
+                RCLCPP_ERROR(this->get_logger(), "Integrator controller service not available after waiting.");
                 response->success = false;
-                response->message = "Proportional controller service unavailable. Failed to deactivate node.";
+                response->message = "Integrator controller service unavailable. Failed to deactivate node.";
                 return;
             }
-
-            
-
             deactivate_integrator_service();
 
             response->success = true;
