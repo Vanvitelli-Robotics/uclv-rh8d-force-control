@@ -9,33 +9,49 @@ using std::placeholders::_1;
 class ForceNorm : public rclcpp::Node
 {
 public:
-    // Topic names for sensor state and measured norms
     std::string sensor_state_topic_;
     std::string measured_norm_topic_;
 
-    // Subscription to sensor state messages
-    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr subscription_;
-    // Publisher for sensor norms messages
-    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr publisher_;
+    rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr sensor_state_sub_;
+    rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_norm_topic_pub_;
 
-    // Constructor of the class
     ForceNorm()
     : Node("force_norm"),
-      // Declare and initialize parameters for the node
-      sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "sensor_state")),
-      measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "norm_forces"))
-    {
-        // Create a subscription to receive sensor state messages
-        subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
+      sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", std::string())),
+      measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", std::string()))
+    {   
+        check_parameters();
+        
+        sensor_state_sub_= this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             sensor_state_topic_, 10, std::bind(&ForceNorm::sensorStateCallback, this, _1));
 
-        // Create a publisher to send sensor norm messages
-        publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
+        measured_norm_topic_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             measured_norm_topic_, 10);
     }
 
 private:
-    // Callback function for processing received sensor state messages
+
+
+void check_parameters()
+    {
+        auto check_string_parameter = [this](const std::string &param_name, const std::string &value)
+        {
+            if (value.empty())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid value.", param_name.c_str());
+                rclcpp::shutdown();
+                throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+            }
+        };
+
+        check_string_parameter("measured_norm_topic", measured_norm_topic_);
+        check_string_parameter("sensor_state_topic",sensor_state_topic_);
+
+    
+        RCLCPP_INFO(this->get_logger(), "All required parameters are set correctly.");
+    }
+
+
     void sensorStateCallback(const uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors::SharedPtr msg)
     {
         // Create a message for the calculated norms
@@ -53,11 +69,11 @@ private:
                                           std::pow(msg->forces[i].z, 2)) / 1000.0;
 
             // Log the calculated norm for debugging purposes
-            RCLCPP_INFO(this->get_logger(), "Calculated norm for sensor ID: %d, Norm: %f", msg->ids[i], norm_msg.data[i]);
+            // RCLCPP_INFO(this->get_logger(), "Calculated norm for sensor ID: %d, Norm: %f", msg->ids[i], norm_msg.data[i]);
         }
 
         // Publish the calculated norms
-        publisher_->publish(norm_msg);
+        measured_norm_topic_pub_->publish(norm_msg);
     }
 };
 

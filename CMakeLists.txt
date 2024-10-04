@@ -70,21 +70,28 @@ ament_target_dependencies(
 )
 
 install(TARGETS 
-      euler_integrator_controller
-      proportional_controller
-      force_norm
-      close
-      open
-      slipping_avoidance
-      task_node
-      DESTINATION 
-        lib/${PROJECT_NAME})
+  euler_integrator_controller
+  proportional_controller
+  force_norm
+  close
+  open
+  slipping_avoidance
+  task_node
+  DESTINATION 
+    lib/${PROJECT_NAME}
+)
 
 install(DIRECTORY
-      launch
-      DESTINATION
-        share/${PROJECT_NAME}/
-    )
+  launch
+  DESTINATION
+    share/${PROJECT_NAME}/
+)
+  
+install(DIRECTORY
+  config
+  DESTINATION 
+    share/${PROJECT_NAME}
+)
   
 
 if(BUILD_TESTING)

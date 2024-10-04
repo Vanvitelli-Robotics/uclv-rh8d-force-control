@@ -1,8 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/set_bool.hpp"
+#include "std_srvs/srv/trigger.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/slipping_avoidance.hpp"
-#include "uclv_seed_robotics_ros_interfaces/srv/calibrate_sensors.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -18,7 +18,7 @@ public:
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr close_client_;
     rclcpp::Client<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>::SharedPtr slipping_client_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr open_client_;
-    rclcpp::Client<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors>::SharedPtr calibrate_client_;
+    rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr calibrate_client_;
 
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_msg_;
@@ -29,12 +29,12 @@ public:
           desired_norm_ids_(this->declare_parameter<std::vector<int64_t>>("desired_norm_ids", {0, 1, 2, 3, 4}))
     {
         desired_norm_publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            "/cmd/desired_norm_forces", 10);
+            "/cmd/norm_forces", 10);
 
-        close_client_ = this->create_client<std_srvs::srv::SetBool>("/close");
-        slipping_client_ = this->create_client<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>("/slipping");
-        open_client_ = this->create_client<std_srvs::srv::SetBool>("/open");
-        calibrate_client_ = this->create_client<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors>("/calibrate");
+        close_client_ = this->create_client<std_srvs::srv::SetBool>("close");
+        slipping_client_ = this->create_client<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>("slipping_activation");
+        open_client_ = this->create_client<std_srvs::srv::SetBool>("open");
+        calibrate_client_ = this->create_client<std_srvs::srv::Trigger>("calibrate_sensors");
     }
 
     void run()
@@ -96,7 +96,7 @@ private:
 
     void calibrate()
     {
-        auto request = std::make_shared<uclv_seed_robotics_ros_interfaces::srv::CalibrateSensors::Request>();
+        auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
         auto result = calibrate_client_->async_send_request(request);
     }
 };

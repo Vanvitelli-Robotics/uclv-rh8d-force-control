@@ -14,10 +14,10 @@ public:
     std::vector<int64_t> motor_ids_;                  // List of motor IDs managed by the controller
     std::vector<std::string> motor_sensor_mappings_;  // Mapping motor ID - sensors ID
     std::vector<std::string> sensor_weight_mappings_; // Mapping sensor ID - weight
-    std::string measured_norm_topic_;     // Name of the topic for measured normalized forces
-    std::string desired_norm_topic_;      // Name of the topic for desired normalized forces
+    std::string measured_norm_forces_topic_;     // Name of the topic for measured normalized forces
+    std::string desired_norm_forces_topic_;      // Name of the topic for desired normalized forces
     std::string measured_velocity_topic_; // Name of the topic for publishing errors
-    std::string set_gain_service_name_;   // Name of the service to set gain
+    std::string gain_service_name_;   // Name of the service to set gain
     std::string proportional_service_name_; // Name of the service to activate the controller
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_forces_;  // Message for desired normalized forces
@@ -32,18 +32,12 @@ public:
     // Mapping of sensor IDs to their corresponding weights
     std::unordered_map<int64_t, std::vector<double>> sensor_to_weight_map_;
 
-    // ROS 2 subscriptions to receive sensor data
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_norm_forces_sub_;
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_forces_sub_;
-
-    // ROS 2 publisher to publish motor errors
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr measured_velocity_pub_;
 
-    // ROS 2 service to handle requests for setting the gain value
-    rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr set_gain_service_;
-
-    // Service to activate the controller
-    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr node_service_;
+    rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SetGain>::SharedPtr gain_service_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr proportional_service_;
 
     // Constructor for initializing the node
     ProportionalController()
@@ -52,35 +46,39 @@ public:
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
           motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
           sensor_weight_mappings_(this->declare_parameter<std::vector<std::string>>("sensor_weight_mappings", std::vector<std::string>())),
-          measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", std::string())),
-          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", std::string())),
+          measured_norm_forces_topic_(this->declare_parameter<std::string>("measured_norm_topic", std::string())),
+          desired_norm_forces_topic_(this->declare_parameter<std::string>("desired_norm_forces_topic", std::string())),
           measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", std::string())),
-          set_gain_service_name_(this->declare_parameter<std::string>("set_gain_service_name", std::string())),
+          gain_service_name_(this->declare_parameter<std::string>("gain_service_name", std::string())),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", std::string()))
     {
+
+        check_parameters();
+
+
         // Initialize mappings
         initialize_motor_to_sensor_map();
         initialize_sensor_to_weight_map();
 
         // Create subscription to measured normalized forces
         measured_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            measured_norm_topic_, 10, std::bind(&ProportionalController::measured_norm_forces_callback, this, std::placeholders::_1));
+            measured_norm_forces_topic_, 10, std::bind(&ProportionalController::measured_norm_forces_callback, this, std::placeholders::_1));
 
         // Create subscription to desired normalized forces
         desired_norm_forces_sub_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            desired_norm_topic_, 10, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
+            desired_norm_forces_topic_, 10, std::bind(&ProportionalController::desired_norm_forces_callback, this, std::placeholders::_1));
 
         // Create publisher for motor errors
         measured_velocity_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             measured_velocity_topic_, 10);
 
         // Create service for setting the gain
-        set_gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
-            set_gain_service_name_, std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
+        gain_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SetGain>(
+            gain_service_name_, std::bind(&ProportionalController::set_gain_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         // Create service to activate the controller
-        node_service_ = this->create_service<std_srvs::srv::SetBool>(
-            node_service_name_, std::bind(&ProportionalController::activate_controller_callback, this, std::placeholders::_1, std::placeholders::_2));
+        proportional_service_ = this->create_service<std_srvs::srv::SetBool>(
+            proportional_service_name_, std::bind(&ProportionalController::activate_controller_callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 
 private:
@@ -96,7 +94,16 @@ void check_parameters()
         }
     };
 
-    auto check_vector_parameter = [this](const std::string &param_name, const std::vector<double> &value) {
+    auto check_vector_string_parameter = [this](const std::string &param_name, const std::vector<std::string> &value) {
+        if (value.empty())
+        {
+            RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
+            rclcpp::shutdown();
+            throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+        }
+    };
+
+    auto check_vector_int_parameter = [this](const std::string &param_name, const std::vector<int64_t> &value) {
         if (value.empty())
         {
             RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
@@ -106,7 +113,7 @@ void check_parameters()
     };
 
     auto check_double_parameter = [this](const std::string &param_name, double value) {
-        if (value == 0.0)  // Adjust this condition based on your validation needs
+        if (value == 0.0)
         {
             RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or set to an invalid value. Please provide a valid double value.", param_name.c_str());
             rclcpp::shutdown();
@@ -114,15 +121,15 @@ void check_parameters()
         }
     };
 
-    check_string_parameter("measured_norm_topic_",measured_norm_topic);
-    check_string_parameter("desired_norm_topic_",desired_norm_topic);
-    check_string_parameter("measured_velocity_topic_", measured_velocity_topic);
-    check_string_parameter("set_gain_service_name_", set_gain_service_name);
-    check_string_parameter("proportional_service_name_", proportional_service_name);
-    check_vector_parameter("sensor_weight_mappings_", sensor_weight_mappings);
-    check_vector_parameter("motor_sensor_mappings_", motor_sensor_mappings);
-    check_vector_parameter("motor_ids_", motor_ids);
-    check_double_parameter("gain_", gain);
+    check_string_parameter("measured_norm_topic", measured_norm_forces_topic_);
+    check_string_parameter("desired_norm_forces_topic_",desired_norm_forces_topic_);
+    check_string_parameter("measured_velocity_topic_", measured_velocity_topic_);
+    check_string_parameter("gain_service_name_", gain_service_name_);
+    check_string_parameter("proportional_service_name_", proportional_service_name_);
+    check_vector_string_parameter("sensor_weight_mappings_", sensor_weight_mappings_);
+    check_vector_string_parameter("motor_sensor_mappings_", motor_sensor_mappings_);
+    check_vector_int_parameter("motor_ids_", motor_ids_);
+    check_double_parameter("gain_", gain_);
 
 
 }
@@ -142,7 +149,7 @@ void check_parameters()
     {
         if (!controller_activated_)
         {
-            RCLCPP_WARN(this->get_logger(), "Controller is not activated. Waiting for activation...");
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Controller is not activated. Waiting for activation...");
             return;
         }
         measured_norm_forces_ = *msg;
@@ -196,12 +203,12 @@ void check_parameters()
             auto sensor_ids_iter = motor_to_sensor_map_.find(motor_id); // Find the associated sensor IDs for the motor
             if (sensor_ids_iter == motor_to_sensor_map_.end())          // Check if the motor has a valid mapping
             {
-                RCLCPP_ERROR(this->get_logger(), "No mapping found for motor ID: %ld", motor_id);
+                RCLCPP_ERROR_ONCE(this->get_logger(), "No mapping found for motor ID: %ld", motor_id);
                 continue;
             }
             else
             {
-                RCLCPP_INFO(this->get_logger(), "Ok mapping for motor ID: %ld", motor_id);
+                RCLCPP_INFO_ONCE(this->get_logger(), "Ok mapping for motor ID: %ld", motor_id);
             }
 
             const auto &sensor_ids = sensor_ids_iter->second; // Get the associated sensor IDs for the motor
@@ -215,12 +222,12 @@ void check_parameters()
                 auto weight_iter = sensor_to_weight_map_.find(sensor_id);
                 if (weight_iter == sensor_to_weight_map_.end()) // Check if the sensor has a valid weight mapping
                 {
-                    RCLCPP_ERROR(this->get_logger(), "No mapping found for sensor ID: %ld", sensor_id);
+                    RCLCPP_ERROR_ONCE(this->get_logger(), "No mapping found for sensor ID: %ld", sensor_id);
                     continue;
                 }
                 else
                 {
-                    RCLCPP_INFO(this->get_logger(), "Ok mapping for sensor ID: %ld", sensor_id);
+                    RCLCPP_INFO_ONCE(this->get_logger(), "Ok mapping for sensor ID: %ld", sensor_id);
                 }
 
                 const auto &weights = weight_iter->second;
@@ -232,12 +239,12 @@ void check_parameters()
                 // Check if the sensor ID is found in the measured and desired forces
                 if (desired_force_iter == desired_norm_forces_.ids.end())
                 {
-                    RCLCPP_ERROR(this->get_logger(), "Sensor ID: %ld not found in norm forces desired", sensor_id);
+                    RCLCPP_ERROR_ONCE(this->get_logger(), "Sensor ID: %ld not found in norm forces desired", sensor_id);
                     continue;
                 }
                 else if (measured_force_iter == measured_norm_forces_.ids.end())
                 {
-                    RCLCPP_ERROR(this->get_logger(), "Sensor ID: %ld not found in norm forces measured", sensor_id);
+                    RCLCPP_ERROR_ONCE(this->get_logger(), "Sensor ID: %ld not found in norm forces measured", sensor_id);
                     continue;
                 }
 
@@ -268,7 +275,7 @@ void check_parameters()
             }
             else
             {
-                RCLCPP_ERROR(this->get_logger(), "Total weight is zero for motor ID: %ld", motor_id);
+                RCLCPP_ERROR_ONCE(this->get_logger(), "Total weight is zero for motor ID: %ld", motor_id);
             }
         }
 
@@ -319,17 +326,17 @@ template <typename KeyType, typename ValueType>
             }
 
             map[key] = values;
-            RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
-                        static_cast<int64_t>(key), [&values]()
-                                                   {
-                        std::ostringstream oss;
-                        for (size_t i = 0; i < values.size(); ++i)
-                        {
-                            if (i > 0)
-                                oss << ", ";
-                            oss << values[i];
-                        }
-                        return oss.str(); }().c_str());
+            // RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
+            //             static_cast<int64_t>(key), [&values]()
+            //                                        {
+            //             std::ostringstream oss;
+            //             for (size_t i = 0; i < values.size(); ++i)
+            //             {
+            //                 if (i > 0)
+            //                     oss << ", ";
+            //                 oss << values[i];
+            //             }
+            //             return oss.str(); }().c_str());
         }
 
         if (map.empty())

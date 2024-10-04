@@ -18,9 +18,9 @@ public:
 
     std::string sensor_state_topic_;
     std::string desired_forces_topic_;
-    std::string activation_service_;
-    std::string desired_norm_topic_;
-    std::string difference_topic_;
+    std::string slipping_service_name_;
+    std::string desired_norm_forces_topic_;
+    std::string delta_forces_topic_;
 
     std::vector<double> data_vec;
     std::vector<uint16_t> ids_vec;
@@ -34,30 +34,30 @@ public:
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>::SharedPtr sensor_state_subscription_;
     rclcpp::Subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_subscription;
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_publisher_;
-    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr difference_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr difference_force_publisher_;
 
-    rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>::SharedPtr activation_service_trigger_;
+    rclcpp::Service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>::SharedPtr slipping_service_;
 
     SlippingAvoidance()
         : Node("slipping_avoidance"),
           coefficients_(this->declare_parameter<std::vector<double>>("coefficients", std::vector<double>())),
           sensor_state_topic_(this->declare_parameter<std::string>("sensor_state_topic", "")),
-          activation_service_(this->declare_parameter<std::string>("activation_service", "")),
-          desired_norm_topic_(this->declare_parameter<std::string>("desired_norm_topic", "")),
-          difference_topic_(this->declare_parameter<std::string>("difference_topic", ""))
+          slipping_service_name_(this->declare_parameter<std::string>("slipping_service_name", "")),
+          desired_norm_forces_topic_(this->declare_parameter<std::string>("desired_norm_forces_topic", "")),
+          delta_forces_topic_(this->declare_parameter<std::string>("delta_forces_topic", ""))
     {
         check_parameters();
 
         sensor_state_subscription_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::FTS3Sensors>(
             sensor_state_topic_, 10, std::bind(&SlippingAvoidance::sensor_state_callback, this, _1));
 
-        activation_service_trigger_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>(
-            activation_service_, std::bind(&SlippingAvoidance::activate_callback, this, std::placeholders::_1, std::placeholders::_2));
+        slipping_service_ = this->create_service<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>(
+            slipping_service_name_, std::bind(&SlippingAvoidance::activate_callback, this, std::placeholders::_1, std::placeholders::_2));
 
         desired_norm_publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            desired_norm_topic_, 10);
+            desired_norm_forces_topic_, 10);
 
-        difference_publisher_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>(difference_topic_, 10);
+        difference_force_publisher_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>(delta_forces_topic_, 10);
     }
 
 private:
@@ -84,9 +84,9 @@ private:
 
         check_vector_parameter("coefficients", coefficients_);
         check_string_parameter("sensor_state_topic", sensor_state_topic_);
-        check_string_parameter("activation_service", activation_service_);
-        check_string_parameter("desired_norm_topic", desired_norm_topic_);
-        check_string_parameter("difference_topic", difference_topic_);
+        check_string_parameter("slipping_service", slipping_service_name_);
+        check_string_parameter("desired_norm_forces_topic", desired_norm_forces_topic_);
+        check_string_parameter("delta_forces_topic", delta_forces_topic_);
 
         RCLCPP_INFO(this->get_logger(), "All required parameters are set correctly.");
     }
@@ -103,21 +103,21 @@ private:
 
                 if (coefficients_[i] != 0)
                 {
-                    coeffiecient_ = coefficients_[i];
+                    coefficient_ = coefficients_[i];
                     x = msg->forces[i].x - initial_sensor_state_.forces[i].x;
                     y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
 
-                    geometry_msgs::msg::Vector3Stamped difference_msg;
-                    difference_msg.header.stamp = this->get_clock()->now();
-                    difference_msg.vector.x = x;
-                    difference_msg.vector.y = y;
-                    difference_msg.vector.z = 0.0;
+                    geometry_msgs::msg::Vector3Stamped difference_force_msg;
+                    difference_force_msg.header.stamp = this->get_clock()->now();
+                    difference_force_msg.vector.x = x;
+                    difference_force_msg.vector.y = y;
+                    difference_force_msg.vector.z = 0.0;
 
-                    difference_publisher_->publish(difference_msg);
+                    difference_force_publisher_->publish(difference_force_msg);
                 }
 
                 double abs = (std::sqrt(std::pow(x, 2) + std::pow(y, 2))) / 1000.0;
-                double cmd = coeffiecient_ * abs;
+                double cmd = coefficient_ * abs;
 
                 newcmd.data.push_back(data_vec[i] + cmd);
             }

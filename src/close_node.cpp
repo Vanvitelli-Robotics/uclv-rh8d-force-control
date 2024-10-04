@@ -14,7 +14,7 @@ class Close : public rclcpp::Node
 {
 public:
     std::string measured_norm_topic_;                // Topic for normalized forces
-    std::string node_service_name_;                  // Name for the start/stop service
+    std::string close_service_name_;                 // Name for the start/stop service
     std::string measured_velocity_topic_;            // Topic for measured velocity
     std::vector<int64_t> motor_ids_;                 // Motor IDs for the velocities
     double threshold_;                               // Threshold for forces
@@ -37,18 +37,20 @@ public:
     std::unordered_map<int64_t, std::vector<int64_t>> motor_to_sensor_map_;
 
     Close()
-        : Node("close_node"),
+        : Node("close"),
           measured_norm_topic_(this->declare_parameter<std::string>("measured_norm_topic", "")),
           measured_velocity_topic_(this->declare_parameter<std::string>("measured_velocity_topic", "")),
           motor_sensor_mappings_(this->declare_parameter<std::vector<std::string>>("motor_sensor_mappings", std::vector<std::string>())),
           motor_ids_(this->declare_parameter<std::vector<int64_t>>("motor_ids", std::vector<int64_t>())),
           threshold_(this->declare_parameter<double>("threshold", 0.0)),
           initial_velocity_(this->declare_parameter<double>("initial_velocity", 0.0)),
-          node_service_name_(this->declare_parameter<std::string>("node_service_name", "")),
+          close_service_name_(this->declare_parameter<std::string>("close_service_name", "")),
           proportional_service_name_(this->declare_parameter<std::string>("proportional_service_name", "")),
           integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", ""))
 
     {
+
+        check_parameters();
 
         initialize_motor_to_sensor_map();
 
@@ -56,7 +58,7 @@ public:
             measured_norm_topic_, 10, std::bind(&Close::measured_norm_forces_callback, this, std::placeholders::_1));
 
         node_service_ = this->create_service<std_srvs::srv::SetBool>(
-            node_service_name_, std::bind(&Close::service_activate_callback, this, _1, std::placeholders::_2));
+            close_service_name_, std::bind(&Close::service_activate_callback, this, _1, std::placeholders::_2));
 
         measured_velocity_pub_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             measured_velocity_topic_, 10);
@@ -67,6 +69,61 @@ public:
     }
 
 private:
+    void check_parameters()
+    {
+        auto check_string_parameter = [this](const std::string &param_name, const std::string &value)
+        {
+            if (value.empty())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid value.", param_name.c_str());
+                rclcpp::shutdown();
+                throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+            }
+        };
+
+        auto check_double_parameter = [this](const std::string &param_name, const double &value)
+        {
+            if (value == 0.0)
+            {
+                RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
+                rclcpp::shutdown();
+                throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+            }
+        };
+
+        auto check_vector_int64_parameter = [this](const std::string &param_name, const std::vector<int64_t> &value)
+        {
+            if (value.empty())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
+                rclcpp::shutdown();
+                throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+            }
+        };
+
+        auto check_vector_string_parameter = [this](const std::string &param_name, const std::vector<std::string> &value)
+        {
+            if (value.empty())
+            {
+                RCLCPP_ERROR(this->get_logger(), "Parameter '%s' is missing or empty. Please provide a valid vector.", param_name.c_str());
+                rclcpp::shutdown();
+                throw std::runtime_error("Invalid or missing parameter: '" + param_name + "'");
+            }
+        };
+
+        check_string_parameter("measured_norm_topic", measured_norm_topic_);
+        check_string_parameter("measured_velocity_topic", measured_velocity_topic_);
+        check_vector_string_parameter("motor_sensor_mappings", motor_sensor_mappings_);
+        check_vector_int64_parameter("motor_ids", motor_ids_);
+        check_double_parameter("threshold", threshold_);
+        check_double_parameter("initial_velocity", initial_velocity_);
+        check_string_parameter("close_service_name", close_service_name_);
+        check_string_parameter("proportional_service_name", proportional_service_name_);
+        check_string_parameter("integrator_service_name", integrator_service_name_);
+
+        RCLCPP_INFO(this->get_logger(), "All required parameters are set correctly.");
+    }
+
     template <typename KeyType, typename ValueType>
     void
     initialize_map_from_mappings(
@@ -108,8 +165,8 @@ private:
 
             map[key] = values;
             RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
-                        static_cast<int64_t>(key), [&values]()
-                                                   {
+                             static_cast<int64_t>(key), [&values]()
+                                                        {
                                 std::ostringstream oss;
                                 for (size_t i = 0; i < values.size(); ++i)
                                 {
@@ -132,21 +189,20 @@ private:
         initialize_map_from_mappings(motor_sensor_mappings_, motor_to_sensor_map_, "motor_sensor_mappings");
     }
 
-    void publish_motor_velocity(const std::vector<int64_t>& motor_ids, double velocity)
-{
-    uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
-
-
-    for (int64_t motor_id : motor_ids_)
+    void publish_motor_velocity(const std::vector<int64_t> &motor_ids, double velocity)
     {
-        velocity_msg.ids.push_back(motor_id);
+        uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
+
+        for (int64_t motor_id : motor_ids_)
+        {
+            velocity_msg.ids.push_back(motor_id);
+            velocity_msg.data.push_back(velocity);
+        }
+        
+
+        RCLCPP_INFO(this->get_logger(), "Publishing velocity: %ld", velocity);
+        measured_velocity_pub_->publish(velocity_msg);
     }
-    velocity_msg.data.push_back(velocity);
-
-    RCLCPP_INFO(this->get_logger(), "Publishing velocity: %ld", velocity);
-    measured_velocity_pub_->publish(velocity_msg);
-}
-
 
     void service_activate_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                                    std::shared_ptr<std_srvs::srv::SetBool::Response> response)
@@ -174,7 +230,6 @@ private:
             RCLCPP_WARN(this->get_logger(), "Service called with deactivate command.");
             service_close_actived_ = false;
 
-            
             if (!integrator_service_client_->wait_for_service(std::chrono::seconds(1)))
             {
                 RCLCPP_ERROR(this->get_logger(), "Integrator controller service not available after waiting.");
@@ -204,6 +259,7 @@ private:
 
     void activate_integrator_service()
     {
+        RCLCPP_WARN(this->get_logger(), "AAAAAAAAAA");
         auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
         request->data = true;
 
@@ -238,7 +294,6 @@ private:
         RCLCPP_INFO(this->get_logger(), "Request sent to deactivate the proportional node.");
     }
 
-
     void process_norm_forces()
     {
         bool all_above_threshold = true;
@@ -270,8 +325,6 @@ private:
                 RCLCPP_INFO(this->get_logger(), "Measured norm for sensor ID %ld: %f", sensor_id, measured_norm);
 
                 partial_above_threshold = partial_above_threshold || (measured_norm >= threshold_);
-
-
             }
             all_above_threshold = all_above_threshold && partial_above_threshold;
         }
@@ -292,8 +345,8 @@ int main(int argc, char *argv[])
 
     try
     {
-        auto close_node = std::make_shared<Close>();
-        rclcpp::spin(close_node);
+        auto close = std::make_shared<Close>();
+        rclcpp::spin(close);
     }
     catch (const std::exception &e)
     {
