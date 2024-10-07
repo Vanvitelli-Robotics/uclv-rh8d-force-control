@@ -37,8 +37,10 @@ public:
         calibrate_client_ = this->create_client<std_srvs::srv::Trigger>("calibrate_sensors");
     }
 
-    void run()
-    {   
+   void run()
+{
+    while (rclcpp::ok())  // Loop while the node is active
+    {
         calibrate();
         std::this_thread::sleep_for(std::chrono::seconds{2});
 
@@ -52,14 +54,19 @@ public:
         std::cin.get();
         call_slipping_service();
 
-        std::cout << "Press for deactive slipping..." << std::endl;
+        std::cout << "Press for deactivate slipping..." << std::endl;
         std::cin.get();
         call_slipping_service();
 
         std::cout << "Press for open..." << std::endl;
         std::cin.get();
         call_open_service();
+
+        std::cout << "Press Enter to repeat the process..." << std::endl;
+        std::cin.get();
     }
+}
+
 
 private:
     void publish_desired_norm_forces()
