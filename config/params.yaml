@@ -1,13 +1,13 @@
 
 /**:
   ros__parameters:
-    motor_state_topic: "/state/motors" #plurale
+    motor_state_topic: "/state/motors"
     motor_thresholds: [100, 3995]
     measured_norm_topic: "/state/norm_forces"
     sensor_state_topic: "/state/sensors"
     desired_norm_forces_topic: "/cmd/norm_forces"
     desired_position_topic: "/cmd/positions"
-    measured_velocity_topic: "/state/velocities"
+    measured_velocity_topic: "/cmd/velocities"
     open_service_name: "open"
     close_service_name: "close"
     proportional_service_name: "proportional_activation"
@@ -18,7 +18,8 @@
 
 proportional_controller:
   ros__parameters:
-    motor_ids: [35, 36, 37, 38]
+    # motor_ids: [35, 36, 37, 38]
+    motor_ids: [35, 36, 37]
     sensor_weight_mappings: ["0:1", "1:1", "2:1", "3:1", "4:1"]
     gain: 600.0
     gain_service_name: "set_gain"
@@ -28,7 +29,8 @@ euler_integrator_controller:
   ros__parameters:
     dt: 0.001
     # motor_ids: [35, 36, 37, 38]
-    motor_ids: [36, 37, 38]
+    # motor_ids: [36, 37, 38]
+    motor_ids: [35, 36, 37]
 
 
 close:
@@ -36,14 +38,14 @@ close:
     threshold: 0.1
     initial_velocity: 300.0
     # motor_ids: [35, 36, 37, 38]
-    motor_ids: [36, 37, 38]
+    motor_ids: [35, 36, 37]
 
 open:
   ros__parameters:
     # motor_position: [3000.0, 100.0, 100.0, 100.0, 100.0]
     # motor_ids: [34, 35, 36, 37, 38]
     motor_position: [100.0, 100.0, 100.0]
-    motor_ids: [36, 37, 38]
+    motor_ids: [35, 36, 37]
 
     
 slipping_avoidance:

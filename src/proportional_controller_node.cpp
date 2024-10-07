@@ -326,17 +326,17 @@ template <typename KeyType, typename ValueType>
             }
 
             map[key] = values;
-            // RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
-            //             static_cast<int64_t>(key), [&values]()
-            //                                        {
-            //             std::ostringstream oss;
-            //             for (size_t i = 0; i < values.size(); ++i)
-            //             {
-            //                 if (i > 0)
-            //                     oss << ", ";
-            //                 oss << values[i];
-            //             }
-            //             return oss.str(); }().c_str());
+            RCLCPP_INFO(this->get_logger(), "Mapped key %ld to values: %s",
+                        static_cast<int64_t>(key), [&values]()
+                                                   {
+                        std::ostringstream oss;
+                        for (size_t i = 0; i < values.size(); ++i)
+                        {
+                            if (i > 0)
+                                oss << ", ";
+                            oss << values[i];
+                        }
+                        return oss.str(); }().c_str());
         }
 
         if (map.empty())
