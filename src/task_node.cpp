@@ -13,13 +13,11 @@ public:
     std::vector<double> desired_norm_data_;
     std::vector<int64_t> desired_norm_ids_;
 
-
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_publisher_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr close_client_;
     rclcpp::Client<uclv_seed_robotics_ros_interfaces::srv::SlippingAvoidance>::SharedPtr slipping_client_;
     rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr open_client_;
     rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr calibrate_client_;
-
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_msg_;
 
@@ -37,10 +35,9 @@ public:
         calibrate_client_ = this->create_client<std_srvs::srv::Trigger>("calibrate_sensors");
     }
 
-   void run()
-{
-    while (rclcpp::ok())  // Loop while the node is active
+    void run()
     {
+
         calibrate();
         std::this_thread::sleep_for(std::chrono::seconds{2});
 
@@ -61,12 +58,7 @@ public:
         std::cout << "Press for open..." << std::endl;
         std::cin.get();
         call_open_service();
-
-        std::cout << "Press Enter to repeat the process..." << std::endl;
-        std::cin.get();
     }
-}
-
 
 private:
     void publish_desired_norm_forces()

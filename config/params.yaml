@@ -50,7 +50,7 @@ open:
     
 slipping_avoidance:
   ros__parameters:
-    coefficients: [0.0, 1.75, 0.0, 0.0, 0.0]
+    coefficients: [0.0, 0.3, 0.0, 0.0, 0.0]
     slipping_service_name: "slipping_activation"
     delta_forces_topic: "delta_forces" 
 
