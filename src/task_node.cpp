@@ -3,6 +3,7 @@
 #include "std_srvs/srv/trigger.hpp"
 #include "uclv_seed_robotics_ros_interfaces/msg/float64_with_ids_stamped.hpp"
 #include "uclv_seed_robotics_ros_interfaces/srv/slipping_avoidance.hpp"
+#include "uclv_dynamixel_utils/colors.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -39,9 +40,11 @@ public:
     {
 
         calibrate();
+        std::cout << "Calibrate " << SUCCESS_COLOR <<"DONE" << CRESET << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds{2});
 
         publish_desired_norm_forces();
+        std::cout << "Publish desired norm forces " << SUCCESS_COLOR <<"DONE" << CRESET << std::endl;
 
         std::cout << "Press for close..." << std::endl;
         std::cin.get();
