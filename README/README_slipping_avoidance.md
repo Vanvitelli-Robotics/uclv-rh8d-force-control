@@ -12,6 +12,10 @@ This node provides a slipping avoidance mechanism by subscribing to force sensor
 - **`desired_norm_topic`** (uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped): 
   Publishes the calculated desired force values with their respective IDs.
 
+### Published Topics:
+- **`desired_norm_topic`** (uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped): 
+  Publishes the adjusted forces after applying the coefficients.
+
 - **`difference_topic`** (`geometry_msgs/msg/Vector3Stamped`): 
   Publishes the difference in x and y components of the forces, calculated as deviations from the initial sensor state.
 
@@ -26,9 +30,6 @@ This node provides a slipping avoidance mechanism by subscribing to force sensor
 - **`sensor_state_topic`** (`std::string`): 
   The topic name where the current force sensor data is published.
   
-- **`activation_service`** (`std::string`): 
-  The service name to activate or deactivate the node.
-  
 - **`desired_norm_topic`** (`std::string`): 
   The topic name to which the calculated desired norm forces are published.
 
@@ -38,9 +39,9 @@ This node provides a slipping avoidance mechanism by subscribing to force sensor
 ## Node Behavior
 
 ### Activation:
-- Upon receiving an activation service call, the node switches its state to active and records the initial sensor state.
+- Upon receiving an activation service call, the node switches its state to active and records the initial sensor state by waiting for the first message on `sensor_state_topic`.
 - When active, it calculates force deviations by comparing the current force readings to the initial state and adjusting them based on the predefined coefficients.
-  
+
 ### Deactivation:
 - On receiving a deactivation service call, the node stops performing any further calculations and remains inactive.
 
@@ -54,24 +55,8 @@ This node provides a slipping avoidance mechanism by subscribing to force sensor
   - Initializes the `data_vec` and `ids_vec` vectors with values from the service request.
   
 - **activate_callback**: 
-  - Toggles the node's activation state and stores the initial sensor state when activated.
-
-## Usage Example
-
-1. Set the necessary parameters:
-   - `sensor_state_topic`: The topic for sensor state data.
-   - `desired_norm_topic`: The topic where adjusted forces will be published.
-   - `difference_topic`: The topic where the difference in forces will be published.
-   - `coefficients`: The set of coefficients to apply to the force deviations.
-   
-2. Call the activation service to start the node:
-   ```bash
-   ros2 service call /activate_slipping_avoidance uclv_seed_robotics_ros_interfaces/srv/SlippingAvoidance
-   ```
-
-3. The node will begin processing force data and publishing adjusted forces and force differences when activated.
-4. To stop the node, call the activation service again to deactivate it.
+  - Toggles the node's activation state and stores the initial sensor state when activated. Uses `rclcpp::wait_for_message` to wait for the first sensor state message to initialize the reference forces.
 
 ## Error Handling
 
-- If any required parameters are missing or invalid, the node will log an error and shut down.
+- If any required parameters are missing or invalid, the node will log an error and shut down. The node also stops execution if any fatal exceptions are caught.
