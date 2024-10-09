@@ -282,8 +282,7 @@ void check_parameters()
         // Publish the computed motor errors
         measured_velocity_pub_->publish(velocity_msg);
 
-        // Reset the flags for receiving new data
-        // desired_norm_forces_received_ = false;
+
         measured_norm_forces_received_ = false;
     }
 
