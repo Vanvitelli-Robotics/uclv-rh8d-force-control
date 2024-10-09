@@ -18,7 +18,6 @@
 
 proportional_controller:
   ros__parameters:
-    # motor_ids: [35, 36, 37, 38]
     motor_ids: [35, 36, 37]
     sensor_weight_mappings: ["0:1", "1:1", "2:1", "3:1", "4:1"]
     gain: 600.0
@@ -28,8 +27,6 @@ proportional_controller:
 euler_integrator_controller:
   ros__parameters:
     dt: 0.001
-    # motor_ids: [35, 36, 37, 38]
-    # motor_ids: [36, 37, 38]
     motor_ids: [35, 36, 37]
 
 
@@ -37,13 +34,10 @@ close:
   ros__parameters:
     threshold: 0.1
     initial_velocity: 300.0
-    # motor_ids: [35, 36, 37, 38]
     motor_ids: [35, 36, 37]
 
 open:
   ros__parameters:
-    # motor_position: [3000.0, 100.0, 100.0, 100.0, 100.0]
-    # motor_ids: [34, 35, 36, 37, 38]
     motor_position: [100.0, 100.0, 100.0]
     motor_ids: [35, 36, 37]
 
