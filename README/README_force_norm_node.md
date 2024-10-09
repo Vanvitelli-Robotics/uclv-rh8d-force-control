@@ -91,3 +91,15 @@ Here is an example of how to run the node and interact with it:
    ```bash
    ros2 topic echo /measured_norm_topic
    ```
+---
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
