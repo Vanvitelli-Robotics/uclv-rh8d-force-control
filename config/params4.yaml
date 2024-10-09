@@ -1,0 +1,16 @@
+proportional_controller:
+  ros__parameters:
+    motor_ids: [35, 36, 37]
+
+euler_integrator_controller:
+  ros__parameters:
+    motor_ids: [35, 36, 37]
+
+close:
+  ros__parameters:
+    motor_ids: [35, 36, 37]
+
+open:
+  ros__parameters:
+    motor_position: [100.0, 100.0, 100.0]
+    motor_ids: [35, 36, 37]
