@@ -1,64 +1,93 @@
-# ForceNorme Node
+# Force Norm Node
+
+## Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+  - [Dependencies](#dependencies)
+  - [Build Instructions](#build-instructions)
+- [Usage](#usage)
+  - [Running the Node](#running-the-node)
+  - [Subscribing Topics](#subscribing-topics)
+  - [Publishing Topics](#publishing-topics)
+  - [Parameters](#parameters)
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Overview
 
-The `ForceNorme` ROS2 node calculates the norm (magnitude) of force vectors received from sensors and publishes these norms along with their corresponding sensor IDs. This node is useful for converting force vectors into scalar magnitudes for further processing.
+The `ForceNorm` node calculates the norm of 3D forces received from force-torque sensors and publishes the result. It subscribes to the sensor data, computes the magnitude of the forces, and publishes the normalized values for further use.
 
-## Node Functionality
+---
 
-### 1. Subscriptions and Publications
+## Features
 
-- **Subscription:**
-  - **Topic:** `sensor_state`
-  - **Message Type:** `uclv_seed_robotics_interfaces/msg/FTS3Sensors`
-  - **Purpose:** Receives sensor force data, including force vectors and their associated IDs.
+- Subscribes to force-torque sensor data and calculates the norms of the forces.
+- Publishes the calculated force norms with corresponding sensor IDs.
 
-- **Publication:**
-  - **Topic:** `norm_forces`
-  - **Message Type:** `uclv_seed_robotics_interfaces/msg/SensorsNorm`
-  - **Purpose:** Publishes norms of the forces, associating each norm with its corresponding sensor ID.
+---
 
-### 2. Message Types
+## Installation
 
-- **`FTS3Sensors`**
-  - **Fields:**
-    - `header`: Standard message header.
-    - `ids`: Array of sensor IDs.
-    - `forces`: Array of force vectors with `x`, `y`, and `z` components.
+### Dependencies
 
-- **`SensorsNorm`**
-  - **Fields:**
-    - `header`: Standard message header.
-    - `ids`: Array of sensor IDs.
-    - `norm`: Array of `Float64Stamped` messages, where each contains:
-      - `header`: Message header.
-      - `data`: Computed norm (magnitude) for the corresponding sensor.
+- ROS 2 Humble
+- `uclv_seed_robotics_ros_interfaces` package for custom messages
 
-### 3. Node Execution
+### Build Instructions
 
-#### Subscription Callback (`sensorStateCallback`)
+```bash
+# Clone this repository into your ROS2 workspace
+cd ~/ros2_ws/src
+git clone https://github.com/yourusername/your-ros2-package.git
 
-The `sensorStateCallback` function processes the incoming sensor data to compute and publish norms.
+# Build the workspace
+cd ~/ros2_ws
+colcon build
 
-1. **Create and Initialize Messages:**
-   - **`norm_msg`**: An instance of `SensorsNorm` to be published.
-   - Copies the sensor IDs from the incoming `FTS3Sensors` message to `norm_msg.ids`.
+# Source the workspace
+source install/setup.bash
+```
+## Usage
 
-2. **Compute Norms:**
-   - Initializes an `unordered_map<uint16_t, double>` named `norms_map` to store norms for each sensor ID.
-   - Iterates through each force vector in the `FTS3Sensors` message:
-     - Extracts the force vector and its corresponding sensor ID.
-     - Computes the norm (magnitude) of each force vector using the formula:
-       ```cpp
-       double norm = std::sqrt(std::pow(force.x, 2) + std::pow(force.y, 2) + std::pow(force.z, 2)) / 1000.0;
-       ```
-     - Stores the computed norm in `norms_map` with the sensor ID as the key.
+### Running the Node
 
-3. **Populate Norm Message:**
-   - Iterates through the sensor IDs in `norm_msg.ids`:
-     - For each sensor ID, retrieves the norm from `norms_map`. If the ID is not found in the map, assigns a default value of `0.0`.
-     - Creates a `Float64Stamped` message for each ID with the computed norm and header information.
-     - Adds the `Float64Stamped` message to `norm_msg.norm`.
+To run the `force_norm` node with default parameters, use:
 
-4. **Publish Result:**
-   - Publishes the `SensorsNorm` message containing the norms and their corresponding sensor IDs.
+```bash
+ros2 run your_package_name force_norm
+```
+To specify custom parameters, provide a YAML configuration file:
+```bash
+ros2 run your_package_name force_norm --ros-args --params-file path/to/your_config.yaml
+```
+### Subscribing Topics
+
+- **`/sensor_state_topic`** (`uclv_seed_robotics_ros_interfaces/msg/FTS3Sensors`): This topic receives the force-torque sensor data, which includes the sensor IDs and 3D force vectors.
+
+### Publishing Topics
+
+- **`/measured_norm_topic`** (`uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped`): Publishes the calculated norms of the 3D forces, including sensor IDs and norm values.
+
+### Parameters
+
+- **`sensor_state_topic`** (`string`): The topic to subscribe for sensor data.
+- **`measured_norm_topic`** (`string`): The topic to publish the calculated force norms.
+
+---
+
+## Examples
+
+Here is an example of how to run the node and interact with it:
+
+1. Run the node:
+   ```bash
+   ros2 run your_package_name force_norm
+   ```
+2. Subscribe to the calculated norms:
+   ```bash
+   ros2 topic echo /measured_norm_topic
+   ```
