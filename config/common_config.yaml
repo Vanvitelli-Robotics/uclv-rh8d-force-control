@@ -95,9 +95,6 @@ close:
     threshold: 0.1
     initial_velocity: 300.0
 
-open:
-  ros__parameters:
-    motor_position: [100.0, 100.0, 100.0]
 
 slipping_avoidance:
   ros__parameters:
