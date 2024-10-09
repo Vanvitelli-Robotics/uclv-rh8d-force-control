@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(uclv_seed_robotics_ros_interfaces REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(uclv_dynamixel_utils REQUIRED)
 
 add_executable(euler_integrator_controller src/euler_integrator_controller_node.cpp)
 ament_target_dependencies(
@@ -67,6 +68,7 @@ ament_target_dependencies(
   "rclcpp"
   "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
   "std_srvs"
+  "uclv_dynamixel_utils"
 )
 
 install(TARGETS 
