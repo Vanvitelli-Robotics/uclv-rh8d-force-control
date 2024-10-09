@@ -1,105 +1,135 @@
 
 # Close Node
 
-`Close` node is responsible for controlling motors based on force norms received from sensors. The node listens to the normalized forces from sensors, checks if the forces exceed a threshold, and either commands motor velocities or activates a proportional controller depending on the sensor data.
+## Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+  - [Dependencies](#dependencies)
+  - [Build Instructions](#build-instructions)
+- [Usage](#usage)
+  - [Running the Node](#running-the-node)
+  - [Subscribing Topics](#subscribing-topics)
+  - [Publishing Topics](#publishing-topics)
+  - [Services](#services)
+  - [Parameters](#parameters)
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Node Details
+---
 
-### Subscribed Topics
-- **`measured_norm_topic`** (`uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped`): 
-  The topic that provides normalized force readings from the sensors. These forces are associated with specific sensor IDs.
+## Overview
 
-### Published Topics
-- **`measured_velocity_topic`** (`uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped`): 
-  The topic where the node publishes the velocities of the motors when the forces are below the threshold.
+The `close_node` is a ROS2 node that manages the control of motor velocities based on force sensor data. It subscribes to sensor norms, and adjusts the velocity of actuators based on predefined thresholds. Additionally, it interacts with external services to activate and deactivate proportional and integrator controllers.
 
-### Services
-- **`node_service_name`** (`std_srvs/srv/SetBool`): 
-  A service to activate or deactivate the close node. 
-  - When activated, the node will start monitoring the forces and publishing velocities to the motors.
-  - When deactivated, the node will stop monitoring forces and trigger the proportional controller instead.
+---
 
-### Parameters
-- **`measured_norm_topic`** (`string`): 
-  The topic name for receiving normalized forces from sensors.
-  
-- **`measured_velocity_topic`** (`string`): 
-  The topic name for publishing motor velocities.
+## Features
 
-- **`motor_ids`** (`array of int64`): 
-  The IDs of the motors controlled by this node.
+- Subscribes to sensor norm data and monitors if the force exceeds a threshold.
+- Publishes motor velocity commands for motor control.
+- Offers services to start or stop the node and activate proportional or integrator controllers.
+- Configurable thresholds and velocity values.
 
-- **`threshold`** (`double`): 
-  The threshold above which the node triggers the proportional controller.
+---
 
-- **`initial_velocity`** (`double`): 
-  The initial velocity to command the motors when the node is activated.
+## Installation
 
-- **`motor_sensor_mappings`** (`array of strings`): 
-  Mappings between motor IDs and corresponding sensor IDs. The format for each mapping string should be:
-  ```
-  motor_id: sensor_id1, sensor_id2, ...
-  ```
+### Dependencies
 
-- **`node_service_name`** (`string`): 
-  The service name for starting or stopping the node.
+- ROS 2 Humble
+- `uclv_seed_robotics_ros_interfaces` package for custom messages
+- `std_srvs` for ROS2 service definitions
 
-- **`proportional_service_name`** (`string`): 
-  The service name to activate or deactivate the proportional controller.
+### Build Instructions
 
-- **`integrator_service_name`** (`string`): 
-  The service name to activate or deactivate the integrator.
+```bash
+# Clone this repository into your ROS2 workspace
+cd ~/ros2_ws/src
+git clone https://github.com/yourusername/your-ros2-package.git
 
-## Node Logic
+# Build the workspace
+cd ~/ros2_ws
+colcon build
 
-1. **Activation**: When the node is activated via the service, it starts listening to the `measured_norm_topic` for normalized force data. It then checks whether the forces corresponding to the sensor IDs mapped to each motor exceed the threshold. If the forces are below the threshold, the node publishes motor velocities to `measured_velocity_topic`.
-
-2. **Deactivation**: When the node is deactivated via the service, it stops the integrator controller using the `integrator_service_name`. When the node is deactivated via check of thresholds, it also active the `proportional_service_name`.
-
-
-3. **Force Threshold Handling**: 
-   - The node maps motors to sensor IDs via the parameter `motor_sensor_mappings`.
-   - For each motor, it checks whether any of the associated sensor IDs report a force above the threshold.
-   - If all associated sensors report forces above the threshold, the node stops commanding motor velocities and triggers the proportional controller.
-
-4. **Service Clients**: 
-   - The node communicates with the integrator and proportional controller using ROS2 services (`SetBool`).
-   - When activated, the node activates the integrator service.
-   - When deactivated, it activates the proportional controller service.
-
-## Usage Example
-
-In your launch file, set the required parameters and run the node:
-
-```python
-from launch import LaunchDescription
-from launch_ros.actions import Node
-
-def generate_launch_description():
-    return LaunchDescription([
-        Node(
-            package='your_package_name',
-            executable='close_node',
-            name='close_node',
-            parameters=[
-                {"measured_norm_topic": "/sensor_state"},
-                {"measured_velocity_topic": "/desired_velocity"},
-                {"motor_ids": [35, 36, 37]},
-                {"threshold": 0.1},
-                {"initial_velocity": 300},
-                {"motor_sensor_mappings": ["35:0", "36:1", "37:2", "38:3,4"]},
-                {"node_service_name": "/close_node_service"},
-                {"proportional_service_name': "/proportional_controller_service"},
-                {"integrator_service_name': "/integrator_controller_service"}
-            ]
-        )
-    ])
+# Source the workspace
+source install/setup.bash
 ```
 
-This will start the node with the appropriate parameters and monitor forces for motors 35, 36, and 37. If the threshold is exceeded for all sensors associated with a motor, the node will stop controlling the motors and activate the proportional controller.
+---
 
-## Dependencies
+## Usage
 
-- ROS2 Foxy or newer
-- `uclv_seed_robotics_ros_interfaces` package for the custom messages
-- Standard ROS2 packages (`rclcpp`, `std_srvs`)
+### Running the Node
+
+To run the `close_node` with the default parameters, use:
+
+```bash
+ros2 run your_package_name close_node
+```
+
+To specify custom parameters, provide a YAML file:
+
+```bash
+ros2 run your_package_name close_node --ros-args --params-file path/to/your_config.yaml
+```
+
+### Subscribing Topics
+
+- **`/measured_norm_topic`** (`uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped`): This topic receives sensor norm values and corresponding IDs.
+
+### Publishing Topics
+
+- **`/measured_velocity_topic`** (`uclv_seed_robotics_ros_interfaces/msg/Float64WithIdsStamped`): Publishes calculated motor velocity commands with respective motor IDs.
+
+### Services
+
+- **`/close_service_name`** (`std_srvs/srv/SetBool`): Service to start or stop the node.
+- **`/proportional_service_name`** (`std_srvs/srv/SetBool`): Service to activate or deactivate the proportional controller.
+- **`/integrator_service_name`** (`std_srvs/srv/SetBool`): Service to activate or deactivate the integrator controller.
+
+### Parameters
+
+- **`measured_norm_topic`** (`string`): Name of the topic that provides normalized forces.
+- **`measured_velocity_topic`** (`string`): Name of the topic where motor velocities are published.
+- **`motor_ids`** (`std::vector<int64_t>`): IDs of the motors being controlled.
+- **`motor_sensor_mappings`** (`std::vector<std::string>`): Mapping between motors and the sensors monitoring them.
+- **`threshold`** (`double`): Threshold value for the norm of the forces. If exceeded, action is taken.
+- **`initial_velocity`** (`double`): Initial velocity to apply when the node is activated.
+- **`close_service_name`** (`string`): Name of the service to start/stop the node.
+- **`proportional_service_name`** (`string`): Name of the proportional service to activate.
+- **`integrator_service_name`** (`string`): Name of the integrator service to activate.
+
+---
+
+## Examples
+
+Here is an example of how to run the node and interact with it:
+
+1. Run the node:
+   ```bash
+   ros2 run your_package_name close_node
+   ```
+
+2. Subscribe to the motor velocity topic:
+   ```bash
+   ros2 topic echo /measured_velocity_topic
+   ```
+
+3. Call the start service:
+   ```bash
+   ros2 service call /close_service_name std_srvs/srv/SetBool "{data: true}"
+   ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
