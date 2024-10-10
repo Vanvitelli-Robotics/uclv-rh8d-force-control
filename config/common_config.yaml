@@ -78,10 +78,7 @@ fingertip_sensors:
 
 
 
-
-
-
-
+## COMMON CONFIG (sarebbe anche quello della palla)
 # /**:
 #   ros__parameters:
 #     motor_state_topic: "/state/motors"
@@ -98,6 +95,7 @@ fingertip_sensors:
 #     motor_sensor_mappings: ['35:0', '36:1', '37:2', '38:3,4']
 #     calibrate_service_name: "calibrate_sensors" 
 
+
 # proportional_controller:
 #   ros__parameters:
 #     sensor_weight_mappings: ["0:1", "1:1", "2:1", "3:1", "4:1"]
@@ -113,10 +111,13 @@ fingertip_sensors:
 #     threshold: 0.1
 #     initial_velocity: 300.0
 
+# open:
+#   ros__parameters:
+#     # Parameters related to position moved to specific config
 
 # slipping_avoidance:
 #   ros__parameters:
-#     coefficients: [0.0, 3.3, 0.0, 0.0, 0.0]
+#     coefficients: [0.0, 3.3, 0.0, 0.0, 0.0] # 0.3 friction coefficient
 #     slipping_service_name: "slipping_activation"
 #     delta_forces_topic: "delta_forces"
 
@@ -126,11 +127,9 @@ fingertip_sensors:
 #     baudrate: 1000000
 #     serial_port: "/dev/ttyUSB0"
 #     protocol_version: 2.0
-#     motor_ids: [31, 32, 33, 34, 35, 36, 37, 38]
 
 # fingertip_sensors:
 #   ros__parameters:
 #     millisecondsTimer: 2
 #     baudrate: 1000000
 #     serial_port: "/dev/ttyUSB1"
-
