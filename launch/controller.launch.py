@@ -1,7 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
-from launch.actions import LogInfo
 from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 
@@ -14,7 +13,7 @@ def generate_launch_description():
 
 
     config_dir = get_package_share_directory('repo_controller') + '/config/'
-    common_config = PathJoinSubstitution([config_dir, 'commong_config.yaml'])
+    common_config = PathJoinSubstitution([config_dir, 'common_config.yaml'])  # CORRETTO: common_config.yaml
     specific_config = PathJoinSubstitution([config_dir, LaunchConfiguration('config_file')])
 
 
