@@ -24,7 +24,7 @@ public:
 
     TaskNode()
         : Node("task_node"),
-          desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.3, 0.3, 0.3, 0.3, 0.3})),
+          desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.2, 0.2, 0.2, 0.2, 0.2})),
           desired_norm_ids_(this->declare_parameter<std::vector<int64_t>>("desired_norm_ids", {0, 1, 2, 3, 4}))
     {
         desired_norm_publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
