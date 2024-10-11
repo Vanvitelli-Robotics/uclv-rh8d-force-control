@@ -13,8 +13,11 @@ using std::placeholders::_2;
 class TaskNode2 : public rclcpp::Node
 {
 public:
-    std::vector<double> desired_norm_data_1 = {0.2, 0.2, 0.2, 0.2, 0.2};
-    std::vector<double> desired_norm_data_2 = {0.3, 1.0, 1.0, 0.4, 0.4};
+    std::vector<double> desired_norm_data_1 = {0.1, 0.2, 0.2, 0.2, 0.2};
+    std::vector<double> desired_norm_data_2 = {0.1, 0.2, 0.2, 0.2, 0.2};
+    std::vector<double> desired_norm_data_3 = {0.1, 0.2, 1.0, 0.2, 0.2};
+    std::vector<double> desired_norm_data_4 = {0.1, 1.0, 1.0, 0.7, 0.7};
+    std::vector<double> desired_norm_data_5 = {0.1, 1.0, 1.0, 0.7, 0.7};
     std::vector<int64_t> desired_norm_ids_ = {0, 1, 2, 3, 4};
 
     rclcpp::Publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>::SharedPtr desired_norm_publisher_;
@@ -42,7 +45,7 @@ public:
         std::cout << "Calibrate " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds{3});
 
-        publish_desired_norm_forces_1();
+        publish_desired_norm_forces(desired_norm_data_1);
         std::cout << "Publish desired norm forces 1 " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds{1});
 
@@ -50,12 +53,20 @@ public:
         std::cin.get();
         call_close_service();
 
-        std::this_thread::sleep_for(std::chrono::seconds{30});
+        std::this_thread::sleep_for(std::chrono::seconds{20});
 
-        publish_desired_norm_forces_2();
+        publish_desired_norm_forces(desired_norm_data_2);
         std::cout << "Publish desired norm forces 2 " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
 
-        
+        std::this_thread::sleep_for(std::chrono::seconds{20});
+
+        publish_desired_norm_forces(desired_norm_data_3);
+        std::cout << "Publish desired norm forces 3 " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
+
+        std::this_thread::sleep_for(std::chrono::seconds{20});
+
+        publish_desired_norm_forces(desired_norm_data_4);
+        std::cout << "Publish desired norm forces 4 " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
 
         std::cout << "Press for open..." << std::endl;
         std::cin.get();
@@ -64,24 +75,13 @@ public:
     }
 
 private:
-    void publish_desired_norm_forces_1()
+    void publish_desired_norm_forces(const std::vector<double> norms)
     {
         uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_msg_;
         for (size_t i = 0; i < desired_norm_ids_.size(); i++)
         {
             desired_norm_msg_.ids.push_back(desired_norm_ids_[i]);
-            desired_norm_msg_.data.push_back(desired_norm_data_1[i]);
-        }
-        desired_norm_publisher_->publish(desired_norm_msg_);
-    }
-
-    void publish_desired_norm_forces_2()
-    {
-        uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_msg_;
-        for (size_t i = 0; i < desired_norm_ids_.size(); i++)
-        {
-            desired_norm_msg_.ids.push_back(desired_norm_ids_[i]);
-            desired_norm_msg_.data.push_back(desired_norm_data_2[i]);
+            desired_norm_msg_.data.push_back(norms[i]);
         }
         desired_norm_publisher_->publish(desired_norm_msg_);
     }

@@ -259,7 +259,6 @@ private:
 
     void activate_integrator_service()
     {
-        RCLCPP_WARN(this->get_logger(), "AAAAAAAAAA");
         auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
         request->data = true;
 
