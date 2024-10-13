@@ -97,6 +97,8 @@ private:
         {
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
 
+            newcmd.header.stamp = this->get_clock()->now();
+
             for (size_t i = 0; i < msg->forces.size(); ++i)
             {
                 newcmd.ids.push_back(ids_vec[i]);
@@ -108,7 +110,6 @@ private:
                     y = msg->forces[i].y - initial_sensor_state_.forces[i].y;
 
                     geometry_msgs::msg::Vector3Stamped difference_force_msg;
-                    difference_force_msg.header.stamp = this->get_clock()->now();
                     difference_force_msg.vector.x = x;
                     difference_force_msg.vector.y = y;
                     difference_force_msg.vector.z = 0.0;
