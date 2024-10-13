@@ -7,7 +7,7 @@
 
 using std::placeholders::_1;
 
-class TaskNode : public rclcpp::Node
+class TaskNode3 : public rclcpp::Node
 {
 public:
     std::vector<double> desired_norm_data_;
@@ -22,8 +22,8 @@ public:
 
     uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_msg_;
 
-    TaskNode()
-        : Node("task_node"),
+    TaskNode3()
+        : Node("task_node3"),
           desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.2, 0.2, 0.2, 0.2, 0.2})),
           desired_norm_ids_(this->declare_parameter<std::vector<int64_t>>("desired_norm_ids", {0, 1, 2, 3, 4})),
           norm_threshold_(this->declare_parameter<double>("norm_threshold", 1.0))
@@ -35,9 +35,8 @@ public:
         open_client_ = this->create_client<std_srvs::srv::SetBool>("open");
         calibrate_client_ = this->create_client<std_srvs::srv::Trigger>("calibrate_sensors");
 
-        // Sottoscrizione al topic /state/norm_forces
         norm_force_subscriber_ = this->create_subscription<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
-            "/state/norm_forces", 10, std::bind(&TaskNode::check_and_handle_norm_forces, this, _1));
+            "/state/norm_forces", 10, std::bind(&TaskNode3::check_and_handle_norm_forces, this, _1));
     }
 
     void run()
@@ -118,7 +117,7 @@ private:
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<TaskNode>();
+    auto node = std::make_shared<TaskNode3>();
     node->run();
     rclcpp::spin(node);
     rclcpp::shutdown();
