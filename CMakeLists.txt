@@ -80,6 +80,16 @@ ament_target_dependencies(
   "uclv_dynamixel_utils"
 )
 
+
+add_executable(task_node3 src/task_node3.cpp)
+ament_target_dependencies(
+  task_node3
+  "rclcpp"
+  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
+  "std_srvs"
+  "uclv_dynamixel_utils"
+)
+
 install(TARGETS 
   euler_integrator_controller
   proportional_controller
@@ -89,6 +99,7 @@ install(TARGETS
   slipping_avoidance
   task_node
   task_node2
+  taks_node3
   DESTINATION 
     lib/${PROJECT_NAME}
 )
