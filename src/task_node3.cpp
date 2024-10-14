@@ -26,12 +26,12 @@ public:
     TaskNode3()
         : Node("task_node3"),
           // ball & bottle
-        //   desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.5, 0.5, 0.5, 0.3, 0.3})),
-        //   norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.5)),
+          desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.5, 0.7, 0.7, 0.3, 0.3})),
+          norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.5)),
 
           // sponge
-          desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.2, 0.2, 0.2, 0.2, 0.2})),
-          norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.3)),
+        //   desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.2, 0.2, 0.2, 0.2, 0.2})),
+        //   norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.3)),
 
         desired_norm_ids_(this->declare_parameter<std::vector<int64_t>>("desired_norm_ids", {0, 1, 2, 3, 4}))
 
