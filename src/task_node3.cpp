@@ -7,7 +7,6 @@
 
 using std::placeholders::_1;
 
-
 class TaskNode3 : public rclcpp::Node
 {
 public:
@@ -26,14 +25,16 @@ public:
 
     TaskNode3()
         : Node("task_node3"),
-            // ball & bottle
+          // ball & bottle
         //   desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.5, 0.5, 0.5, 0.3, 0.3})),
-            // sponge
-        desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.2, 0.2, 0.2, 0.2, 0.2})),
+        //   norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.5)),
 
-          desired_norm_ids_(this->declare_parameter<std::vector<int64_t>>("desired_norm_ids", {0, 1, 2, 3, 4})),
-          norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.3)), // 0.5 for bottle and ball
-          check_norm_forces_(false)
+          // sponge
+          desired_norm_data_(this->declare_parameter<std::vector<double>>("desired_norm_data", {0.2, 0.2, 0.2, 0.2, 0.2})),
+          norm_threshold_(this->declare_parameter<double>("norm_threshold", 0.3)),
+
+        desired_norm_ids_(this->declare_parameter<std::vector<int64_t>>("desired_norm_ids", {0, 1, 2, 3, 4}))
+
     {
         desired_norm_publisher_ = this->create_publisher<uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped>(
             "/cmd/norm_forces", 10);
@@ -47,7 +48,7 @@ public:
     }
 
     void run()
-    {   
+    {
         std::this_thread::sleep_for(std::chrono::seconds{2});
         calibrate();
         std::cout << "Calibrate " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
@@ -61,9 +62,8 @@ public:
         call_close_service();
 
         std::cout << "Press Enter to start checking norm forces..." << std::endl;
-        std::cin.get(); 
+        std::cin.get();
         check_norm_forces_ = true;
-
     }
 
 private:
@@ -122,7 +122,6 @@ private:
         }
     }
 };
-
 
 int main(int argc, char **argv)
 {
