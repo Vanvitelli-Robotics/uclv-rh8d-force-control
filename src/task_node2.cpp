@@ -68,6 +68,10 @@ public:
         publish_desired_norm_forces(desired_norm_data_4);
         std::cout << "Publish desired norm forces 4 " << SUCCESS_COLOR << "DONE" << CRESET << std::endl;
 
+        std::this_thread::sleep_for(std::chrono::seconds{20});
+
+        publish_desired_norm_forces(desired_norm_data_4);
+        
         std::cout << "Press for open..." << std::endl;
         std::cin.get();
         std::this_thread::sleep_for(std::chrono::seconds{2});
@@ -78,6 +82,7 @@ private:
     void publish_desired_norm_forces(const std::vector<double> norms)
     {
         uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped desired_norm_msg_;
+        desired_norm_msg_.header.stamp = this->get_clock()->now();
         for (size_t i = 0; i < desired_norm_ids_.size(); i++)
         {
             desired_norm_msg_.ids.push_back(desired_norm_ids_[i]);

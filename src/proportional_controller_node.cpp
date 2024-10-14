@@ -266,6 +266,7 @@ void check_parameters()
             }
 
             // Calculate the weighted average error for the motor
+            velocity_msg.header.stamp = rclcpp::Clock{}.now();
             if (total_weights > 0.0)
             {
                 double average_error = total_weighted_error / total_weights;

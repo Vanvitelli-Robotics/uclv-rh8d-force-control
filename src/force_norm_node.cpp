@@ -56,7 +56,7 @@ void check_parameters()
     {
         // Create a message for the calculated norms
         uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped norm_msg;
-        norm_msg.header.stamp = this->now();  // Set the current time stamp
+        norm_msg.header.stamp = rclcpp::Clock{}.now();  // Set the current time stamp
         norm_msg.ids = msg->ids;  // Copy sensor IDs
         norm_msg.data.resize(msg->forces.size());  // Resize norms vector to match the size of forces
 

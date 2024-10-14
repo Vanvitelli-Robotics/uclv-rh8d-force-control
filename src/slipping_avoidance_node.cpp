@@ -97,7 +97,7 @@ private:
         {
             uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped newcmd;
 
-            newcmd.header.stamp = this->get_clock()->now();
+            newcmd.header.stamp = rclcpp::Clock{}.now();
 
             for (size_t i = 0; i < msg->forces.size(); ++i)
             {

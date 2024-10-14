@@ -99,7 +99,7 @@ install(TARGETS
   slipping_avoidance
   task_node
   task_node2
-  taks_node3
+  task_node3
   DESTINATION 
     lib/${PROJECT_NAME}
 )

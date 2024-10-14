@@ -192,7 +192,7 @@ private:
     void publish_motor_velocity(const std::vector<int64_t> &motor_ids, double velocity)
     {
         uclv_seed_robotics_ros_interfaces::msg::Float64WithIdsStamped velocity_msg;
-
+        velocity_msg.header.stamp = rclcpp::Clock{}.now();
         for (int64_t motor_id : motor_ids_)
         {
             velocity_msg.ids.push_back(motor_id);

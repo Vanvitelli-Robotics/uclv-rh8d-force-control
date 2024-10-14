@@ -66,6 +66,7 @@ public:
 private:
     void publish_desired_norm_forces()
     {
+        desired_norm_msg_.header.stamp = rclcpp::Clock{}.now();
         for (size_t i = 0; i < desired_norm_ids_.size(); i++)
         {
             desired_norm_msg_.ids.push_back(desired_norm_ids_[i]);

@@ -154,6 +154,7 @@ private:
     void publish_motor_position(const std::vector<int64_t> motor_ids, const std::vector<double> positions)
     {
         uclv_seed_robotics_ros_interfaces::msg::MotorPositions msg;
+        msg.header.stamp = rclcpp::Clock{}.now();
         for (int64_t motor_id : motor_ids)
         {
             msg.ids.push_back(motor_id);
