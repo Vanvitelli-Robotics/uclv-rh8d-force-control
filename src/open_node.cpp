@@ -29,6 +29,7 @@ public:
 
     rclcpp::TimerBase::SharedPtr calibration_timer_;
 
+
     Open()
         : Node("open"),
           integrator_service_name_(this->declare_parameter<std::string>("integrator_service_name", "")),
@@ -102,7 +103,10 @@ private:
     {
         if (request->data)
         {
+            RCLCPP_ERROR(this->get_logger(), "request: %d", request->data);
             RCLCPP_INFO(this->get_logger(), "Stopping integrator and proportional controller, setting motor positions.");
+
+            publish_motor_position(motor_ids_, motor_positions_);
 
             if (integrator_service_->wait_for_service(std::chrono::seconds(1)))
             {
@@ -134,7 +138,7 @@ private:
                 return;
             }
 
-            publish_motor_position(motor_ids_, motor_positions_);
+            
 
             calibration_timer_ = this->create_wall_timer(
                 std::chrono::seconds(2),
@@ -155,16 +159,28 @@ private:
     {
         uclv_seed_robotics_ros_interfaces::msg::MotorPositions msg;
         msg.header.stamp = rclcpp::Clock{}.now();
-        for (int64_t motor_id : motor_ids)
-        {
-            msg.ids.push_back(motor_id);
-        }
-        for (auto pos : positions)
-        {
-            msg.positions.push_back(pos);
-        }
 
+        for (size_t i = 0; i < motor_ids.size(); i++)
+        {
+            msg.ids.push_back(motor_ids[i]);
+        }
+        
+        for (size_t i = 0; i < positions.size(); i++)
+        {
+            msg.positions.push_back(positions[i]);
+        }
+        
+        
         motor_position_pub_->publish(msg);
+        
+        for (size_t i = 0; i < motor_ids.size(); i++)
+        {
+            RCLCPP_ERROR(this->get_logger(), "ids: %d", msg.ids[i]);
+        }
+        for (size_t i = 0; i < positions.size(); i++)
+        {
+            RCLCPP_ERROR(this->get_logger(), "positions: %f", msg.positions[i]);
+        }
     }
 
     void calibrate()

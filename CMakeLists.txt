@@ -62,33 +62,12 @@ ament_target_dependencies(
 )
 
 
-add_executable(task_node src/task_node.cpp)
-ament_target_dependencies(
-  task_node
-  "rclcpp"
-  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
-  "std_srvs"
-  "uclv_dynamixel_utils"
-)
-
-add_executable(task_node2 src/task_node2.cpp)
-ament_target_dependencies(
-  task_node2
-  "rclcpp"
-  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
-  "std_srvs"
-  "uclv_dynamixel_utils"
-)
 
 
-add_executable(task_node3 src/task_node3.cpp)
-ament_target_dependencies(
-  task_node3
-  "rclcpp"
-  "uclv_seed_robotics_ros_interfaces" # std_msgs sta quì
-  "std_srvs"
-  "uclv_dynamixel_utils"
-)
+
+
+
+
 
 install(TARGETS 
   euler_integrator_controller
@@ -97,24 +76,13 @@ install(TARGETS
   close
   open
   slipping_avoidance
-  task_node
-  task_node2
-  task_node3
   DESTINATION 
     lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY
-  launch
-  DESTINATION
-    share/${PROJECT_NAME}/
-)
+
   
-install(DIRECTORY
-  config
-  DESTINATION 
-    share/${PROJECT_NAME}
-)
+
   
 
 if(BUILD_TESTING)
