@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>repo_controller</name>
+  <name>uclv_rh8d_force_control</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="roberto.chello@studenti.unicampania.it">robertochello</maintainer>
